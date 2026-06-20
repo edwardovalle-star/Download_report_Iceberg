@@ -1,0 +1,8 @@
+.env
+.venv/
+__pycache__/
+descargas_iceberg/
+*.log
+*.png
+*.xls
+*.xlsx
