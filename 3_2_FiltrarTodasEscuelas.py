@@ -187,7 +187,7 @@ def filtrar_datos():
         condiciones_texto.append(f'Materia NO contiene "{PATRON_EXCLUIR}"')
 
         # 3. Excluir materias específicas
-        condicion_materias = False
+        condicion_materias = True
         # for materia in MATERIAS_EXCLUIDAS:
         #     condicion_materias = condicion_materias & (df.iloc[:, 6] != materia)
         #     condiciones_texto.append(f'Materia != "{materia}"')

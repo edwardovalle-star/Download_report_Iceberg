@@ -8,7 +8,7 @@ El programa abre ICEBERG, inicia sesión, entra al reporte configurado, seleccio
 
 ## 1. ¿Para qué sirve este proyecto?
 
-Este bot sirve para automatizar la descarga y consolidación de reportes de ICEBERG, evitando que el usuario tenga que ingresar manualmente a la plataforma, seleccionar periodo por periodo, descargar cada archivo y unirlos manualmente.
+Este bot sirve para automatizar la descarga, consolidación y filtrado de reportes de ICEBERG, evitando que el usuario tenga que ingresar manualmente a la plataforma, seleccionar periodo por periodo, descargar cada archivo y unirlos manualmente.
 
 Actualmente el proyecto permite descargar reportes como:
 
@@ -47,6 +47,8 @@ descarga_iceberg/
 │
 ├── 1_Descargar.py
 ├── 2_Consolidar.py
+├── 3_Filtrar.py
+├── 3_2_FiltrarTodasEscuelas.py
 ├── config.py
 ├── requirements.txt
 ├── .env
@@ -61,6 +63,8 @@ Explicación sencilla:
 |---|---|
 | `1_Descargar.py` | Descarga los reportes desde ICEBERG. |
 | `2_Consolidar.py` | Consolida los archivos descargados en un Excel final. |
+| `3_Filtrar.py` | Filtra el consolidado final para una dependencia específica, por ejemplo Ingeniería de Sistemas. |
+| `3_2_FiltrarTodasEscuelas.py` | Filtra el consolidado final sin limitarlo a una sola dependencia o escuela. |
 | `config.py` | Tiene la configuración de reportes, periodos, URLs y carpetas. |
 | `requirements.txt` | Lista las librerías que se deben instalar. |
 | `.env` | Guarda el usuario y contraseña de ICEBERG. No se comparte. |
@@ -657,6 +661,7 @@ Con el entorno virtual activo, ejecuta:
 ```powershell
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 Si `python` no funciona, prueba:
@@ -826,6 +831,7 @@ python -m pip install -r requirements.txt
 python -m playwright install chromium
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 Si aparece `No module named playwright`, ejecuta:
@@ -835,6 +841,7 @@ python -m pip install playwright python-dotenv
 python -m playwright install chromium
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 ---
@@ -849,6 +856,7 @@ python3 -m pip install -r requirements.txt
 python3 -m playwright install chromium
 python3 1_Descargar.py
 python3 2_Consolidar.py
+python3 3_Filtrar.py
 ```
 
 ---
@@ -861,6 +869,7 @@ Después de ejecutar:
 ```powershell
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 el proyecto descarga los archivos de ICEBERG dentro de la carpeta:
@@ -958,6 +967,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```powershell
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 ### Paso 3: consolidar los reportes descargados
@@ -968,7 +978,7 @@ python 2_Consolidar.py
 
 ---
 
-## 35. Ejecutar descarga y consolidación en un solo bloque
+## 35. Ejecutar descarga, consolidación y filtrado en un solo bloque
 
 Si ya tienes todo instalado y configurado, puedes ejecutar:
 
@@ -977,6 +987,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\activate
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 ---
@@ -1049,6 +1060,7 @@ Solución:
 ```powershell
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 ---
@@ -1102,6 +1114,8 @@ No se debe compartir toda la carpeta completa sin revisar, porque puede contener
 ```bash
 1_Descargar.py
 2_Consolidar.py
+3_Filtrar.py
+3_2_FiltrarTodasEscuelas.py
 config.py
 requirements.txt
 README.md
@@ -1159,6 +1173,8 @@ Copia estos archivos desde la carpeta original:
 ```bash
 1_Descargar.py
 2_Consolidar.py
+3_Filtrar.py
+3_2_FiltrarTodasEscuelas.py
 config.py
 requirements.txt
 README.md
@@ -1206,6 +1222,8 @@ Copiar archivos necesarios:
 ```powershell
 Copy-Item .\descarga_iceberg\1_Descargar.py .\entrega_descarga_iceberg\
 Copy-Item .\descarga_iceberg\2_Consolidar.py .\entrega_descarga_iceberg\
+Copy-Item .\descarga_iceberg\3_Filtrar.py .\entrega_descarga_iceberg\
+Copy-Item .\descarga_iceberg\3_2_FiltrarTodasEscuelas.py .\entrega_descarga_iceberg\
 Copy-Item .\descarga_iceberg\config.py .\entrega_descarga_iceberg\
 Copy-Item .\descarga_iceberg\requirements.txt .\entrega_descarga_iceberg\
 Copy-Item .\descarga_iceberg\README.md .\entrega_descarga_iceberg\
@@ -1295,6 +1313,7 @@ python -m pip install -r requirements.txt
 python -m playwright install chromium
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 ---
@@ -1336,6 +1355,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\activate
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 ```
 
 ### Linux o macOS
@@ -1345,6 +1365,7 @@ cd ruta/del/proyecto/descarga_iceberg
 source .venv/bin/activate
 python3 1_Descargar.py
 python3 2_Consolidar.py
+python3 3_Filtrar.py
 ```
 
 ---
@@ -1371,6 +1392,512 @@ Ocupacion_Docentes_26V03_184512.xls
 
 ---
 
+
+---
+
+
+---
+
+## Filtrado final con `3_Filtrar.py`
+
+Después de descargar y consolidar los reportes, se puede ejecutar el tercer archivo del proyecto:
+
+```powershell
+python 3_Filtrar.py
+```
+
+Este archivo toma el consolidado generado por `2_Consolidar.py` y aplica filtros para obtener una base final más específica.
+
+---
+
+## ¿Qué hace `3_Filtrar.py`?
+
+El archivo `3_Filtrar.py` realiza este proceso:
+
+1. Busca la carpeta de descargas configurada en `config.py`.
+2. Si no encuentra esa carpeta, busca la carpeta más reciente dentro de `descargas_iceberg`.
+3. Busca un archivo consolidado que empiece por `Consolidado_Final`.
+4. Lee el archivo consolidado `.xlsx`.
+5. Aplica los filtros configurados en la parte superior del archivo.
+6. Muestra estadísticas del filtrado.
+7. Limpia columnas de identificación para quitar valores terminados en `.0`.
+8. Genera un archivo filtrado en Excel.
+9. Genera también una copia en CSV.
+
+---
+
+## Flujo completo recomendado
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\activate
+python 1_Descargar.py
+python 2_Consolidar.py
+python 3_Filtrar.py
+```
+
+| Paso | Archivo | Función |
+|---|---|---|
+| 1 | `1_Descargar.py` | Descarga reportes desde ICEBERG. |
+| 2 | `2_Consolidar.py` | Une los archivos descargados en un consolidado. |
+| 3 | `3_Filtrar.py` | Filtra el consolidado según reglas configuradas. |
+
+---
+
+## Configuración principal del filtro
+
+Los filtros principales están al inicio de `3_Filtrar.py`:
+
+```python
+VALOR_FECHA_FILTRO = "30/03/2026"
+VALORES_FECHAS_MULTIPLES = None
+DEPENDENCIA_OBJETIVO = "INGENIERIA DE SISTEMAS"
+```
+
+---
+
+## Cómo cambiar la fecha del filtro
+
+Abre el archivo:
+
+```bash
+3_Filtrar.py
+```
+
+Busca esta línea:
+
+```python
+VALOR_FECHA_FILTRO = "30/03/2026"
+```
+
+Cambia la fecha por la que necesites.
+
+Ejemplo:
+
+```python
+VALOR_FECHA_FILTRO = "06/04/2026"
+```
+
+El formato esperado es:
+
+```bash
+DD/MM/YYYY
+```
+
+---
+
+## Cómo filtrar por varias fechas
+
+Si necesitas filtrar por varias fechas, busca esta línea:
+
+```python
+VALORES_FECHAS_MULTIPLES = None
+```
+
+Y cámbiala por una lista:
+
+```python
+VALORES_FECHAS_MULTIPLES = ["30/03/2026", "06/04/2026", "13/04/2026"]
+```
+
+Para volver a una sola fecha:
+
+```python
+VALORES_FECHAS_MULTIPLES = None
+```
+
+---
+
+## Cómo cambiar la dependencia filtrada
+
+El filtro de dependencia está en esta línea:
+
+```python
+DEPENDENCIA_OBJETIVO = "INGENIERIA DE SISTEMAS"
+```
+
+Ejemplo:
+
+```python
+DEPENDENCIA_OBJETIVO = "INGENIERIA INDUSTRIAL"
+```
+
+El texto debe coincidir con el valor que viene en el consolidado.
+
+---
+
+## Materias excluidas
+
+El archivo excluye algunas materias específicas:
+
+```python
+MATERIAS_EXCLUIDAS = [
+    "TRABAJO DE INVESTIGACION EN INGENIERIA",
+    "PLAN DE NEGOCIO APLICADO PARA ESCUELA DE INGENIERIA",
+    "COMPRENSION Y PRODUCCION DE TEXTOS"
+]
+```
+
+Para excluir otra materia, agrégala dentro de la lista:
+
+```python
+MATERIAS_EXCLUIDAS = [
+    "TRABAJO DE INVESTIGACION EN INGENIERIA",
+    "PLAN DE NEGOCIO APLICADO PARA ESCUELA DE INGENIERIA",
+    "COMPRENSION Y PRODUCCION DE TEXTOS",
+    "NOMBRE DE OTRA MATERIA"
+]
+```
+
+---
+
+## Excluir materias por palabra clave
+
+Actualmente está configurado así:
+
+```python
+PATRON_EXCLUIR = "PRACTICA"
+```
+
+Esto excluye materias que contengan la palabra `PRACTICA`.
+
+Ejemplos:
+
+```bash
+PRACTICA PROFESIONAL
+PRACTICA EMPRESARIAL
+PRACTICA APLICADA
+```
+
+Si no quieres excluir por esta palabra:
+
+```python
+PATRON_EXCLUIR = ""
+```
+
+---
+
+## Condiciones que aplica el filtro
+
+| Condición | Descripción |
+|---|---|
+| Dependencia | Solo conserva registros de la dependencia configurada. |
+| Materia no contiene `PRACTICA` | Excluye materias con la palabra definida en `PATRON_EXCLUIR`. |
+| Materias excluidas | Excluye materias específicas definidas en `MATERIAS_EXCLUIDAS`. |
+| Capacidad diferente de 0 | Excluye grupos sin capacidad. |
+| Inscritos diferente de 0 | Excluye grupos sin inscritos. |
+| Fecha de inicio | Conserva solo registros con la fecha configurada. |
+
+---
+
+## Columnas usadas por el filtro
+
+| Filtro | Columna esperada | Posición usada en Python |
+|---|---|---|
+| Materia | Columna G | `df.iloc[:, 6]` |
+| Capacidad | Columna M | `df.iloc[:, 12]` |
+| Inscritos | Columna N | `df.iloc[:, 13]` |
+| Fecha inicio grupo | Columna U | `df.iloc[:, 20]` |
+| Dependencia | Columna AO | `df.iloc[:, 40]` |
+
+> Importante: si el reporte de ICEBERG cambia el orden de columnas, puede ser necesario ajustar estas posiciones en `3_Filtrar.py`.
+
+---
+
+## Archivos que genera el filtrado
+
+Al ejecutar:
+
+```powershell
+python 3_Filtrar.py
+```
+
+se generan archivos con nombres similares a:
+
+```bash
+Filtrado_Ingenieria_20260620_084512.xlsx
+Filtrado_Ingenieria_20260620_084512.csv
+```
+
+Estos archivos quedan dentro de la misma carpeta donde está el consolidado.
+
+---
+
+## Error común: no se encontró archivo consolidado
+
+Si aparece:
+
+```bash
+No se encontró archivo consolidado en la carpeta
+Ejecuta primero 2_Consolidar.py
+```
+
+Solución:
+
+```powershell
+python 2_Consolidar.py
+python 3_Filtrar.py
+```
+
+---
+
+## Error común: el filtro no arrojó resultados
+
+Si aparece:
+
+```bash
+El filtro no arrojó resultados (0 filas)
+```
+
+puede significar que:
+
+- La fecha configurada no existe en el consolidado.
+- La dependencia no coincide exactamente.
+- Las materias fueron excluidas por las reglas.
+- Capacidad o inscritos están en 0.
+- Cambió el orden de columnas del reporte.
+
+Solución recomendada:
+
+1. Abre `Consolidado_Final_OcupacionDocente.xlsx`.
+2. Revisa la columna de fecha de inicio.
+3. Copia exactamente una fecha existente.
+4. Pégala en `VALOR_FECHA_FILTRO`.
+5. Ejecuta de nuevo `python 3_Filtrar.py`.
+
+---
+
+## Nota importante sobre el filtro
+
+El archivo `3_Filtrar.py` está preparado principalmente para el consolidado de ocupación docente.
+
+Si se usa con otro reporte de ICEBERG, puede que las columnas no coincidan.
+
+En ese caso, se deben revisar y ajustar las posiciones usadas en los filtros.
+
+---
+
+
+
+---
+
+## Filtro alternativo para todas las escuelas con `3_2_FiltrarTodasEscuelas.py`
+
+Además del filtro específico de Ingeniería, el proyecto puede incluir un filtro alternativo:
+
+```bash
+3_2_FiltrarTodasEscuelas.py
+```
+
+Este archivo sirve para filtrar el consolidado sin limitarlo a una sola dependencia o escuela.
+
+Es útil cuando se necesita obtener información general de varias escuelas, conservando condiciones como fecha, capacidad, inscritos y exclusión de materias tipo práctica.
+
+---
+
+## Diferencia entre `3_Filtrar.py` y `3_2_FiltrarTodasEscuelas.py`
+
+| Archivo | Uso principal |
+|---|---|
+| `3_Filtrar.py` | Filtra una dependencia específica, por ejemplo `INGENIERIA DE SISTEMAS`. |
+| `3_2_FiltrarTodasEscuelas.py` | Filtra todas las escuelas, sin aplicar una dependencia específica. |
+
+En otras palabras:
+
+- Usa `3_Filtrar.py` cuando necesitas una sola dependencia.
+- Usa `3_2_FiltrarTodasEscuelas.py` cuando necesitas revisar todas las escuelas.
+
+---
+
+## Flujo recomendado usando filtro de todas las escuelas
+
+Primero se descargan los reportes:
+
+```powershell
+python 1_Descargar.py
+```
+
+Luego se consolidan:
+
+```powershell
+python 2_Consolidar.py
+```
+
+Finalmente se ejecuta el filtro para todas las escuelas:
+
+```powershell
+python 3_2_FiltrarTodasEscuelas.py
+```
+
+También puedes ejecutarlo en bloque:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\activate
+python 1_Descargar.py
+python 2_Consolidar.py
+python 3_2_FiltrarTodasEscuelas.py
+```
+
+---
+
+## Configuración principal de `3_2_FiltrarTodasEscuelas.py`
+
+Al inicio del archivo se encuentra la configuración principal:
+
+```python
+VALOR_FECHA_FILTRO = "02/02/2026"
+VALORES_FECHAS_MULTIPLES = None
+PATRON_EXCLUIR = "PRACTICA"
+```
+
+---
+
+## Cómo cambiar la fecha del filtro de todas las escuelas
+
+Abre el archivo:
+
+```bash
+3_2_FiltrarTodasEscuelas.py
+```
+
+Busca esta línea:
+
+```python
+VALOR_FECHA_FILTRO = "02/02/2026"
+```
+
+Cámbiala por la fecha que necesites.
+
+Ejemplo:
+
+```python
+VALOR_FECHA_FILTRO = "09/02/2026"
+```
+
+El formato debe ser:
+
+```bash
+DD/MM/YYYY
+```
+
+---
+
+## Cómo filtrar varias fechas en todas las escuelas
+
+Busca esta línea:
+
+```python
+VALORES_FECHAS_MULTIPLES = None
+```
+
+Para filtrar varias fechas, cambia `None` por una lista:
+
+```python
+VALORES_FECHAS_MULTIPLES = ["02/02/2026", "09/02/2026", "16/02/2026"]
+```
+
+Si quieres volver a filtrar una sola fecha, deja:
+
+```python
+VALORES_FECHAS_MULTIPLES = None
+```
+
+---
+
+## Qué condiciones aplica `3_2_FiltrarTodasEscuelas.py`
+
+Este filtro aplica las siguientes condiciones:
+
+| Condición | Descripción |
+|---|---|
+| Materia no contiene `PRACTICA` | Excluye materias que contengan la palabra configurada en `PATRON_EXCLUIR`. |
+| Capacidad diferente de 0 | Excluye grupos sin capacidad. |
+| Inscritos diferente de 0 | Excluye grupos sin inscritos. |
+| Fecha de inicio | Conserva solo registros con la fecha o fechas configuradas. |
+
+A diferencia de `3_Filtrar.py`, este archivo no aplica filtro por dependencia.
+
+---
+
+## Ajuste importante recomendado en `3_2_FiltrarTodasEscuelas.py`
+
+En la versión revisada aparece esta línea:
+
+```python
+condicion_materias = False
+```
+
+Y luego esa condición se usa dentro de:
+
+```python
+condicion_final = (
+    condicion_practica &
+    condicion_materias &
+    condicion_capacidad &
+    condicion_inscritos &
+    condicion_fecha
+)
+```
+
+Esto puede hacer que el resultado siempre sea de **0 filas**, porque `False` dentro de un `AND` hace que toda la condición final sea falsa.
+
+## Archivos que genera `3_2_FiltrarTodasEscuelas.py`
+
+Al ejecutar:
+
+```powershell
+python 3_2_FiltrarTodasEscuelas.py
+```
+
+se generan archivos con nombres similares a:
+
+```bash
+Filtrado_TodasLasEscuelas_20260620_091500.xlsx
+Filtrado_TodasLasEscuelas_20260620_091500.csv
+```
+
+Estos archivos quedan en la misma carpeta donde está el consolidado.
+
+Ejemplo:
+
+```bash
+descargas_iceberg/
+└── iceberg_2026_06_20_08_30/
+    ├── Consolidado_Final_OcupacionDocente.xlsx
+    ├── Filtrado_Ingenieria_20260620_084512.xlsx
+    └── Filtrado_TodasLasEscuelas_20260620_091500.xlsx
+```
+
+---
+
+## Error común: el filtro de todas las escuelas devuelve 0 filas
+
+Si `3_2_FiltrarTodasEscuelas.py` devuelve 0 filas, revisar:
+
+1. Que la fecha configurada exista en el consolidado.
+2. Que capacidad e inscritos no estén en 0.
+3. Que el patrón `PRACTICA` no esté excluyendo más registros de lo esperado.
+4. Que la línea `condicion_materias` esté en `True`.
+
+Debe quedar así:
+
+```python
+condicion_materias = True
+```
+
+---
+
+## Columnas usadas por `3_2_FiltrarTodasEscuelas.py`
+
+| Filtro | Columna esperada | Posición usada en Python |
+|---|---|---|
+| Materia | Columna G | `df.iloc[:, 6]` |
+| Capacidad | Columna M | `df.iloc[:, 12]` |
+| Inscritos | Columna N | `df.iloc[:, 13]` |
+| Fecha inicio grupo | Columna U | `df.iloc[:, 20]` |
+
+> Importante: si ICEBERG cambia el orden de columnas, puede ser necesario ajustar estas posiciones en el código.
 
 ---
 
@@ -1474,6 +2001,8 @@ Para este proyecto, normalmente se pueden subir estos archivos:
 ```bash
 1_Descargar.py
 2_Consolidar.py
+3_Filtrar.py
+3_2_FiltrarTodasEscuelas.py
 config.py
 requirements.txt
 README.md
@@ -1738,6 +2267,8 @@ Estos archivos sí pueden subirse:
 ```bash
 1_Descargar.py
 2_Consolidar.py
+3_Filtrar.py
+3_2_FiltrarTodasEscuelas.py
 config.py
 requirements.txt
 README.md
@@ -1840,4 +2371,4 @@ El archivo `.env.example` sí se puede subir, porque solo contiene una plantilla
 
 ## 50. Autor / responsable
 
-Proyecto de automatización para descarga de reportes ICEBERG mediante Python y Playwright.
+Equipo Lite Escuela de Ingenieria de Sistemas.
