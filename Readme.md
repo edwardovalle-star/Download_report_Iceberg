@@ -2,13 +2,13 @@
 
 Este proyecto permite descargar automáticamente reportes desde la plataforma **ICEBERG CUN** usando **Python** y **Playwright**.
 
-El programa abre ICEBERG, inicia sesión, entra al reporte configurado, selecciona cada periodo y descarga el archivo Excel correspondiente.
+El programa abre ICEBERG, inicia sesión, entra al reporte configurado, selecciona cada periodo, descarga los archivos y luego permite consolidarlos en un archivo final de Excel.
 
 ---
 
 ## 1. ¿Para qué sirve este proyecto?
 
-Este bot sirve para automatizar la descarga de reportes de ICEBERG, evitando que el usuario tenga que ingresar manualmente a la plataforma, seleccionar periodo por periodo y descargar cada archivo.
+Este bot sirve para automatizar la descarga y consolidación de reportes de ICEBERG, evitando que el usuario tenga que ingresar manualmente a la plataforma, seleccionar periodo por periodo, descargar cada archivo y unirlos manualmente.
 
 Actualmente el proyecto permite descargar reportes como:
 
@@ -46,6 +46,7 @@ La carpeta del proyecto debe verse más o menos así:
 descarga_iceberg/
 │
 ├── 1_Descargar.py
+├── 2_Consolidar.py
 ├── config.py
 ├── requirements.txt
 ├── .env
@@ -58,7 +59,8 @@ Explicación sencilla:
 
 | Archivo | ¿Para qué sirve? |
 |---|---|
-| `1_Descargar.py` | Es el archivo principal. Ejecuta el bot. |
+| `1_Descargar.py` | Descarga los reportes desde ICEBERG. |
+| `2_Consolidar.py` | Consolida los archivos descargados en un Excel final. |
 | `config.py` | Tiene la configuración de reportes, periodos, URLs y carpetas. |
 | `requirements.txt` | Lista las librerías que se deben instalar. |
 | `.env` | Guarda el usuario y contraseña de ICEBERG. No se comparte. |
@@ -209,7 +211,7 @@ No debe terminar en `.txt` adicional.
 
 ## 8. Crear el archivo `requirements.txt`
 
-Este archivo indica qué librerías necesita el proyecto.
+Este archivo indica qué librerías necesita el proyecto para descargar y consolidar los reportes.
 
 ### Forma visual
 
@@ -233,6 +235,9 @@ requirements.txt
 ```txt
 playwright
 python-dotenv
+pandas
+openpyxl
+odfpy
 ```
 
 7. Guarda el archivo.
@@ -250,6 +255,9 @@ Pega este contenido:
 ```txt
 playwright
 python-dotenv
+pandas
+openpyxl
+odfpy
 ```
 
 Guarda y cierra.
@@ -536,6 +544,9 @@ Si todo está bien, se instalarán:
 
 - `playwright`
 - `python-dotenv`
+- `pandas`
+- `openpyxl`
+- `odfpy`
 
 ---
 
@@ -645,6 +656,7 @@ Con el entorno virtual activo, ejecuta:
 
 ```powershell
 python 1_Descargar.py
+python 2_Consolidar.py
 ```
 
 Si `python` no funciona, prueba:
@@ -813,6 +825,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m playwright install chromium
 python 1_Descargar.py
+python 2_Consolidar.py
 ```
 
 Si aparece `No module named playwright`, ejecuta:
@@ -821,6 +834,7 @@ Si aparece `No module named playwright`, ejecuta:
 python -m pip install playwright python-dotenv
 python -m playwright install chromium
 python 1_Descargar.py
+python 2_Consolidar.py
 ```
 
 ---
@@ -834,7 +848,248 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 python3 -m playwright install chromium
 python3 1_Descargar.py
+python3 2_Consolidar.py
 ```
+
+---
+
+
+## 31. Consolidar los archivos descargados
+
+Después de ejecutar:
+
+```powershell
+python 1_Descargar.py
+python 2_Consolidar.py
+```
+
+el proyecto descarga los archivos de ICEBERG dentro de la carpeta:
+
+```bash
+descargas_iceberg/
+```
+
+Luego se puede ejecutar el segundo archivo:
+
+```powershell
+python 2_Consolidar.py
+```
+
+Este archivo toma los reportes descargados y genera un consolidado final en Excel.
+
+---
+
+## 32. ¿Qué hace `2_Consolidar.py`?
+
+El archivo `2_Consolidar.py` se encarga de:
+
+1. Buscar la carpeta de descarga configurada.
+2. Si no encuentra esa carpeta, buscar la carpeta más reciente dentro de `descargas_iceberg`.
+3. Buscar archivos descargados con extensiones como:
+
+```bash
+.xls
+.txt
+.csv
+.ods
+.xlsx
+```
+
+4. Ignorar archivos que no deben procesarse, como:
+
+```bash
+Consolidado_Final
+Log_
+~$
+```
+
+5. Leer archivos de ICEBERG que parecen Excel, pero realmente pueden venir como texto plano separado por tabulaciones.
+6. Limpiar comillas dobles en nombres de columnas y datos.
+7. Corregir columnas de identificación para quitar valores terminados en `.0`.
+8. Unir todos los archivos válidos en un solo consolidado.
+9. Crear un archivo final en Excel y una copia en CSV.
+
+---
+
+## 33. Archivos que genera la consolidación
+
+Al ejecutar:
+
+```powershell
+python 2_Consolidar.py
+```
+
+se generan archivos como:
+
+```bash
+Consolidado_Final_OcupacionDocente.xlsx
+Consolidado_Final_OcupacionDocente.csv
+```
+
+Estos archivos quedan en la misma carpeta donde están los reportes descargados.
+
+Ejemplo:
+
+```bash
+descargas_iceberg/
+└── iceberg_2026_06_20_08_30/
+    ├── Ocupacion_Docentes_26T03_083031.xls
+    ├── Ocupacion_Docentes_26P03_083155.xls
+    ├── Ocupacion_Docentes_26V03_083220.xls
+    ├── Consolidado_Final_OcupacionDocente.xlsx
+    └── Consolidado_Final_OcupacionDocente.csv
+```
+
+---
+
+## 34. Flujo recomendado de uso
+
+El flujo normal del proyecto es:
+
+### Paso 1: activar el entorno virtual
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\activate
+```
+
+### Paso 2: descargar los reportes desde ICEBERG
+
+```powershell
+python 1_Descargar.py
+python 2_Consolidar.py
+```
+
+### Paso 3: consolidar los reportes descargados
+
+```powershell
+python 2_Consolidar.py
+```
+
+---
+
+## 35. Ejecutar descarga y consolidación en un solo bloque
+
+Si ya tienes todo instalado y configurado, puedes ejecutar:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\activate
+python 1_Descargar.py
+python 2_Consolidar.py
+```
+
+---
+
+## 36. Resultado esperado de la consolidación
+
+Al ejecutar correctamente el consolidador, deberías ver mensajes similares a estos:
+
+```bash
+============================================================
+🔄 CONSOLIDADOR DE REPORTES ICEBERG
+============================================================
+
+[08:45:10] ℹ️ INICIANDO CONSOLIDACIÓN (TEXTO PLANO -> EXCEL)
+[08:45:10] ℹ️ Carpeta objetivo: ./descargas_iceberg/iceberg_2026_06_20_08_30
+[08:45:11] ℹ️ Encontrados 3 archivo(s) para procesar
+[08:45:11] ℹ️ Procesando: Ocupacion_Docentes_26T03_083031.xls
+[08:45:12] ✅ ✓ Procesado (1500 registros)
+[08:45:13] ℹ️ Limpiando formatos de IDs (.0)...
+[08:45:15] ✅ CONSOLIDACIÓN COMPLETADA
+[08:45:15] ℹ️ Archivo: Consolidado_Final_OcupacionDocente.xlsx
+[08:45:15] ℹ️ Total de filas: 4500
+```
+
+---
+
+## 37. Error común: falta instalar `pandas`, `openpyxl` u `odfpy`
+
+Si aparece un error como:
+
+```bash
+ModuleNotFoundError: No module named 'pandas'
+```
+
+o:
+
+```bash
+ModuleNotFoundError: No module named 'openpyxl'
+```
+
+significa que faltan librerías para consolidar.
+
+Solución:
+
+```powershell
+python -m pip install pandas openpyxl odfpy
+```
+
+O instalar todo nuevamente desde `requirements.txt`:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+---
+
+## 38. Error común: no se encontraron carpetas de descarga
+
+Si aparece:
+
+```bash
+No se encontraron carpetas de descarga
+Ejecuta primero 1_Descargar.py
+```
+
+significa que todavía no hay reportes descargados.
+
+Solución:
+
+```powershell
+python 1_Descargar.py
+python 2_Consolidar.py
+```
+
+---
+
+## 39. Error común: no hay archivos para consolidar
+
+Si aparece:
+
+```bash
+No hay archivos para consolidar en la carpeta
+```
+
+puede significar que:
+
+- La descarga no generó archivos.
+- Se está revisando una carpeta incorrecta.
+- Los archivos fueron movidos o eliminados.
+- Solo hay logs o archivos temporales.
+
+Solución recomendada:
+
+1. Abre la carpeta `descargas_iceberg`.
+2. Entra a la carpeta más reciente.
+3. Verifica que existan archivos `.xls`, `.csv`, `.txt`, `.ods` o `.xlsx`.
+4. Ejecuta nuevamente:
+
+```powershell
+python 2_Consolidar.py
+```
+
+---
+
+## 40. Nota sobre los archivos `.xls` de ICEBERG
+
+Algunos archivos descargados desde ICEBERG pueden tener extensión `.xls`, pero internamente no siempre son un Excel real.
+
+A veces son archivos de texto plano separados por tabulaciones.
+
+Por eso `2_Consolidar.py` intenta leerlos como texto usando codificación `latin-1` y diferentes separadores.
+
+Esto es normal en reportes de sistemas antiguos o reportes tipo legacy.
 
 ---
 
@@ -846,6 +1101,7 @@ No se debe compartir toda la carpeta completa sin revisar, porque puede contener
 
 ```bash
 1_Descargar.py
+2_Consolidar.py
 config.py
 requirements.txt
 README.md
@@ -902,6 +1158,7 @@ Copia estos archivos desde la carpeta original:
 
 ```bash
 1_Descargar.py
+2_Consolidar.py
 config.py
 requirements.txt
 README.md
@@ -948,6 +1205,7 @@ Copiar archivos necesarios:
 
 ```powershell
 Copy-Item .\descarga_iceberg\1_Descargar.py .\entrega_descarga_iceberg\
+Copy-Item .\descarga_iceberg\2_Consolidar.py .\entrega_descarga_iceberg\
 Copy-Item .\descarga_iceberg\config.py .\entrega_descarga_iceberg\
 Copy-Item .\descarga_iceberg\requirements.txt .\entrega_descarga_iceberg\
 Copy-Item .\descarga_iceberg\README.md .\entrega_descarga_iceberg\
@@ -1036,6 +1294,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m playwright install chromium
 python 1_Descargar.py
+python 2_Consolidar.py
 ```
 
 ---
@@ -1046,6 +1305,7 @@ python 1_Descargar.py
 |---|---|---|
 | `Activate.ps1 porque la ejecución de scripts está deshabilitada` | PowerShell bloquea scripts | Ejecutar `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
 | `No module named playwright` | Playwright no está instalado en el entorno virtual | Ejecutar `python -m pip install playwright python-dotenv` |
+| `No module named pandas` | Faltan librerías para consolidar | Ejecutar `python -m pip install pandas openpyxl odfpy` |
 | `Cache entry deserialization failed` | Problema menor de caché de pip | Continuar o ejecutar `pip cache purge` |
 | `No se encontraron las credenciales` | Falta el archivo `.env` o está mal escrito | Crear/revisar `.env` |
 | No aparece el enlace Excel | ICEBERG está lento o no generó el reporte | Subir tiempos de espera o usar `MOSTRAR_NAVEGADOR = True` |
@@ -1075,6 +1335,7 @@ cd C:\Users\ASUS\Documents\Github\descarga_iceberg
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\activate
 python 1_Descargar.py
+python 2_Consolidar.py
 ```
 
 ### Linux o macOS
@@ -1083,6 +1344,7 @@ python 1_Descargar.py
 cd ruta/del/proyecto/descarga_iceberg
 source .venv/bin/activate
 python3 1_Descargar.py
+python3 2_Consolidar.py
 ```
 
 ---
@@ -1211,6 +1473,7 @@ Para este proyecto, normalmente se pueden subir estos archivos:
 
 ```bash
 1_Descargar.py
+2_Consolidar.py
 config.py
 requirements.txt
 README.md
@@ -1474,6 +1737,7 @@ Estos archivos sí pueden subirse:
 
 ```bash
 1_Descargar.py
+2_Consolidar.py
 config.py
 requirements.txt
 README.md
