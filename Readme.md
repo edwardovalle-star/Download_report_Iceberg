@@ -1713,14 +1713,24 @@ En otras palabras:
 
 Primero se descargan los reportes:
 
+![1_Descargar](assets/img/1_Descargar.png)
+
 ```powershell
 python 1_Descargar.py
 ```
 
 Luego se consolidan:
 
+![2_Consolidar](assets/img/2_Consolidar.png)
+
 ```powershell
 python 2_Consolidar.py
+```
+
+Filtrar la escuala de Ingeniería de Sistemas:
+
+```powershell
+python 3_Filtrar.py
 ```
 
 Finalmente se ejecuta el filtro para todas las escuelas:
@@ -1736,6 +1746,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\activate
 python 1_Descargar.py
 python 2_Consolidar.py
+python 3_Filtrar.py
 python 3_2_FiltrarTodasEscuelas.py
 ```
 
