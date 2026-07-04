@@ -916,7 +916,6 @@ def mostrar_descarga():
         periodos = st.multiselect(
             "Periodos académicos",
             PERIODOS_UI,
-            default=["26V03", "26P03", "26T03"],
         )
 
         ejecutar = st.form_submit_button("Descargar y consolidar")
