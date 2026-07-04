@@ -1,5 +1,3 @@
-# Dependencias Linux para Playwright/Chromium en Streamlit Community Cloud.
-# Si alguna queda obsoleta según la imagen base de Streamlit Cloud, revisar logs de despliegue.
 libasound2
 libatk-bridge2.0-0
 libatk1.0-0
