@@ -1,68 +1,79 @@
-# ICEBERG Reportes - Guía de usuario y despliegue v10
+# ICEBERG Reportes - App Streamlit v10
 
-Este proyecto permite descargar, consolidar, filtrar y consultar reportes académicos desde la plataforma **ICEBERG CUN**.
+Proyecto para **descargar, consolidar, filtrar y consultar reportes académicos de ICEBERG CUN** mediante una aplicación web construida con **Python, Playwright y Streamlit**.
 
-La versión actual incluye dos formas principales de uso:
+La aplicación permite automatizar el flujo que antes se hacía manualmente:
 
-1. **Uso local en Windows**, ideal para el usuario que ejecuta la app en su propio computador.
-2. **Uso en GitHub Codespaces**, ideal para probar o compartir la app fuera de `localhost`.
-
-Además, la app ahora cuenta con una interfaz en **Streamlit** que permite:
-
-- Validar credenciales de ICEBERG antes de descargar.
-- Seleccionar periodos académicos.
-- Descargar reportes.
-- Consolidar archivos descargados.
-- Filtrar desde datos reales del consolidado.
-- Ver diagnóstico del filtro.
-- Consultar archivos generados en una tabla seleccionable.
-- Descargar archivos individuales.
-- Descargar un ZIP completo con los resultados.
-- Abrir carpetas o archivos cuando se ejecuta en modo local Windows.
+1. Ingresar a ICEBERG.
+2. Seleccionar un reporte.
+3. Descargar archivos por periodo.
+4. Consolidar los archivos descargados.
+5. Filtrar desde datos reales del consolidado.
+6. Descargar resultados en Excel, CSV o ZIP.
 
 ---
 
-## 1. Objetivo del proyecto
+## 1. Estado actual del proyecto
 
-Automatizar el proceso de descarga y tratamiento de reportes de ICEBERG para evitar tareas manuales repetitivas como:
+La versión actual fue validada en tres escenarios:
 
-- Ingresar a ICEBERG.
-- Seleccionar reporte.
-- Elegir periodo por periodo.
-- Descargar archivos.
-- Consolidar manualmente varios archivos.
-- Filtrar información por dependencia, fecha, capacidad, inscritos o materias.
+| Entorno | Estado | Uso recomendado |
+|---|---:|---|
+| Local Windows | Validado | Trabajo diario individual |
+| GitHub Codespaces | Validado | Pruebas compartidas fuera de localhost |
+| Docker local | Validado | Base para posible despliegue estable |
 
 ---
 
-## 2. Estado actual de la versión v10
+## 2. Modos de ejecución
 
-La versión v10 está preparada para trabajar en dos modos:
+La app diferencia entre modo local y modo web/servidor usando variables de entorno.
 
-| Modo | Uso principal | Acciones disponibles |
-|---|---|---|
-| Local Windows | Ejecutar desde el computador del usuario | Abrir carpeta, abrir ubicación, abrir archivo, descargar archivo, descargar ZIP |
-| Web / Codespaces / Docker | Ejecutar fuera del computador local | Descargar archivo seleccionado y descargar ZIP completo |
-
-Esto se controla con variables de entorno:
+### Modo local Windows
 
 ```env
 ICEBERG_MODO_LOCAL=true
 ICEBERG_ENTORNO=local
 ```
 
-o:
+En este modo aparecen estas acciones:
+
+- Abrir carpeta.
+- Abrir ubicación del archivo.
+- Abrir archivo directamente.
+- Descargar archivo seleccionado.
+- Descargar ZIP completo.
+
+### Modo web / Codespaces / Docker
 
 ```env
 ICEBERG_MODO_LOCAL=false
 ICEBERG_ENTORNO=codespaces
 ```
 
+o:
+
+```env
+ICEBERG_MODO_LOCAL=false
+ICEBERG_ENTORNO=docker
+```
+
+En este modo se ocultan las acciones locales:
+
+- Abrir carpeta.
+- Abrir ubicación.
+- Abrir archivo.
+
+Y se mantienen:
+
+- Descargar archivo seleccionado.
+- Descargar ZIP completo.
+
+Esto evita confundir al usuario final cuando la app corre en un entorno remoto o contenedor.
+
 ---
 
-## 3. Estructura actual recomendada del proyecto
-
-La carpeta del proyecto debería verse así:
+## 3. Estructura recomendada del proyecto
 
 ```text
 descarga_iceberg/
@@ -76,9 +87,9 @@ descarga_iceberg/
 ├── config.py
 ├── requirements.txt
 ├── README.md
-├── README_V10_DESPLIEGUE.md
 ├── .env.example
 ├── .gitignore
+├── .dockerignore
 │
 ├── .streamlit/
 │   └── config.toml
@@ -92,157 +103,79 @@ descarga_iceberg/
 └── descargas_iceberg/
 ```
 
-> La carpeta `descargas_iceberg/` se crea durante la ejecución y no debe subirse a GitHub.
+> La carpeta `descargas_iceberg/` se genera durante la ejecución y no debe subirse a GitHub.
 
 ---
 
-## 4. Explicación de archivos principales
+## 4. Archivos principales
 
-| Archivo o carpeta | Descripción |
+| Archivo | Función |
 |---|---|
-| `app.py` | Aplicación principal en Streamlit. Es la interfaz para usuario final. |
-| `app_v10_despliegue.py` | Copia de respaldo de la versión v10. |
-| `1_Descargar.py` | Automatiza la descarga de reportes desde ICEBERG usando Playwright. |
-| `2_Consolidar.py` | Consolida los archivos descargados en Excel y CSV. |
+| `app.py` | Aplicación Streamlit principal para usuario final. |
+| `1_Descargar.py` | Descarga reportes desde ICEBERG usando Playwright. |
+| `2_Consolidar.py` | Consolida archivos descargados en Excel y CSV. |
 | `3_Filtrar.py` | Filtra el consolidado para una dependencia específica. |
-| `3_2_FiltrarTodasEscuelas.py` | Filtra el consolidado sin restringir a una sola dependencia. |
-| `config.py` | Configuración de reportes, periodos, URLs y carpetas. |
-| `requirements.txt` | Librerías necesarias del proyecto. |
+| `3_2_FiltrarTodasEscuelas.py` | Filtra el consolidado sin limitar a una dependencia. |
+| `config.py` | Configuración de reportes, URLs, periodos y carpetas. |
+| `requirements.txt` | Dependencias Python. |
 | `.streamlit/config.toml` | Configuración de Streamlit. |
 | `.devcontainer/devcontainer.json` | Configuración para GitHub Codespaces. |
-| `Dockerfile` | Configuración para crear una imagen Docker. |
-| `docker-compose.yml` | Ejecución con Docker Compose. |
+| `Dockerfile` | Construcción del contenedor Docker. |
+| `docker-compose.yml` | Ejecución de Docker Compose. |
 | `.env.example` | Plantilla de variables de entorno. |
-| `.gitignore` | Lista de archivos que no deben subirse a GitHub. |
+| `.gitignore` | Archivos que no deben subirse al repositorio. |
+| `.dockerignore` | Archivos que no deben copiarse a la imagen Docker. |
 
 ---
 
-## 5. Requisitos generales
+## 5. Requisitos
 
-Para ejecución local:
+### Para ejecución local
 
+- Windows 10/11.
 - Python instalado.
 - Acceso a internet.
 - Usuario y contraseña válidos de ICEBERG.
-- Permisos para consultar los reportes requeridos.
+- Permisos para consultar los reportes.
 - Visual Studio Code recomendado.
-- PowerShell recomendado en Windows.
+- PowerShell recomendado.
 
-Para Codespaces:
+### Para Codespaces
 
 - Repositorio en GitHub.
 - Acceso a GitHub Codespaces.
-- Archivos `.devcontainer/devcontainer.json` y `requirements.txt` en el repositorio.
-- Puerto `8501` habilitado desde la pestaña **Ports**.
+- Archivo `.devcontainer/devcontainer.json`.
+- Puerto `8501` abierto desde la pestaña **Ports**.
+
+### Para Docker
+
+- WSL instalado y actualizado.
+- Docker Desktop instalado.
+- Docker Compose disponible.
 
 ---
 
-## 6. Variables de entorno principales
-
-### 6.1 Modo local Windows
-
-Usar cuando la app se ejecuta en el computador del usuario.
-
-```env
-ICEBERG_MODO_LOCAL=true
-ICEBERG_ENTORNO=local
-```
-
-En este modo la app muestra botones para:
-
-- Abrir carpeta.
-- Abrir ubicación del archivo.
-- Abrir archivo directamente.
-- Descargar archivo.
-- Descargar ZIP.
-
-### 6.2 Modo Codespaces
-
-Usar cuando la app corre en GitHub Codespaces.
-
-```env
-ICEBERG_MODO_LOCAL=false
-ICEBERG_ENTORNO=codespaces
-```
-
-En este modo la app oculta:
-
-- Abrir carpeta.
-- Abrir ubicación.
-- Abrir archivo.
-
-Y deja visibles:
-
-- Descargar archivo seleccionado.
-- Descargar ZIP completo.
-
-### 6.3 Modo Docker
-
-Usar cuando la app corre en contenedor Docker.
-
-```env
-ICEBERG_MODO_LOCAL=false
-ICEBERG_ENTORNO=docker
-```
-
----
-
-## 7. Instalación y ejecución local en Windows
-
-### 7.1 Abrir PowerShell en el proyecto
+## 6. Instalación local en Windows
 
 ```powershell
 cd C:\Users\ASUS\Documents\Github\descarga_iceberg
-```
-
-### 7.2 Crear entorno virtual
-
-```powershell
 python -m venv .venv
-```
-
-Si `python` no funciona:
-
-```powershell
-py -m venv .venv
-```
-
-### 7.3 Activar entorno virtual
-
-```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\activate
-```
-
-Debe aparecer algo similar a:
-
-```powershell
-(.venv) PS C:\Users\ASUS\Documents\Github\descarga_iceberg>
-```
-
-### 7.4 Instalar dependencias
-
-```powershell
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-```
-
-### 7.5 Instalar Chromium de Playwright
-
-```powershell
 python -m playwright install chromium
 ```
 
-### 7.6 Ejecutar la app local
+### Ejecutar local
 
 ```powershell
 $env:ICEBERG_MODO_LOCAL="true"
 $env:ICEBERG_ENTORNO="local"
-
 python -m streamlit run app.py
 ```
 
-La app debe abrir en:
+Abrir:
 
 ```text
 http://localhost:8501
@@ -250,104 +183,93 @@ http://localhost:8501
 
 ---
 
-## 8. Ejecución rápida local después de instalada
-
-Cuando ya instalaste todo una vez, en próximas ejecuciones basta con:
+## 7. Ejecución rápida local después de instalada
 
 ```powershell
 cd C:\Users\ASUS\Documents\Github\descarga_iceberg
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\activate
-
 $env:ICEBERG_MODO_LOCAL="true"
 $env:ICEBERG_ENTORNO="local"
-
 python -m streamlit run app.py
 ```
 
 ---
 
-## 9. Uso de la app Streamlit en modo local
+## 8. Uso general de la app
 
-### Paso 1. Iniciar sesión
+### Paso 1. Validar credenciales
 
-La app solicita usuario y contraseña de ICEBERG.
-
-Primero valida que las credenciales sean correctas. Si el login funciona, permite continuar con la descarga.
+La app solicita usuario y contraseña de ICEBERG. Primero valida que el acceso funcione.
 
 ### Paso 2. Descargar y consolidar
 
-El usuario selecciona los periodos académicos y presiona:
+Selecciona uno o varios periodos y presiona:
 
 ```text
 Descargar y consolidar
 ```
 
-La app ejecuta:
+La app ejecuta internamente:
 
 - `1_Descargar.py`
 - `2_Consolidar.py`
 
-### Paso 3. Filtrar desde datos reales
+### Paso 3. Filtrar
 
-Después de consolidar, la app lee el archivo consolidado y muestra:
+La app lee el consolidado y permite filtrar por:
 
-- Dependencias/carreras encontradas.
-- Fechas de inicio encontradas.
-- Condiciones adicionales:
-  - Excluir PRACTICA.
-  - Excluir materias históricas.
-  - Capacidad diferente de 0.
-  - Inscritos diferente de 0.
+- Dependencia/carrera.
+- Fecha de inicio.
+- Excluir materias con `PRACTICA`.
+- Excluir materias históricas.
+- Capacidad diferente de cero.
+- Inscritos diferente de cero.
 
 ### Paso 4. Archivos generados
 
-La app muestra una tabla seleccionable con archivos como:
+La app muestra una tabla seleccionable con archivos generados.
 
-- `Filtrado_Dinamico_*.xlsx`
-- `Filtrado_Dinamico_*.csv`
-- `Consolidado_Final_OcupacionDocente.xlsx`
-- `Consolidado_Final_OcupacionDocente.csv`
-- `Ocupacion_Docentes_*.xls`
-- `Log_Iceberg_*.log`
+Ejemplos:
 
-En modo local, permite:
-
-- Abrir carpeta.
-- Abrir ubicación del archivo.
-- Abrir archivo.
-- Descargar archivo.
-- Descargar ZIP.
+```text
+Filtrado_Dinamico_*.xlsx
+Filtrado_Dinamico_*.csv
+Consolidado_Final_OcupacionDocente.xlsx
+Consolidado_Final_OcupacionDocente.csv
+Ocupacion_Docentes_*.xls
+Log_Iceberg_*.log
+```
 
 ---
 
-## 10. Ejecución en GitHub Codespaces
+## 9. GitHub Codespaces
 
-GitHub Codespaces permite ejecutar la app en una máquina remota de GitHub, sin depender del equipo local.
+### 9.1 Subir el proyecto a GitHub
 
-### 10.1 Subir el proyecto a GitHub
-
-Desde el equipo local:
+Antes de subir, revisar:
 
 ```powershell
-cd C:\Users\ASUS\Documents\Github\descarga_iceberg
-
 git status
-git add .
-git commit -m "v10 funcional con Streamlit y Codespaces"
-git push
 ```
 
-Antes de subir, confirmar que no se suban:
+Confirmar que no aparezcan:
 
 ```text
 .env
 descargas_iceberg/
 .venv/
-__pycache__/
 ```
 
-### 10.2 Crear Codespace
+Subir cambios:
+
+```powershell
+git add .
+git commit -m "Version v10 funcional local codespaces docker"
+git push
+```
+
+### 9.2 Crear Codespace
 
 En GitHub:
 
@@ -355,7 +277,7 @@ En GitHub:
 Code > Codespaces > Create codespace on main
 ```
 
-### 10.3 Verificar archivo `.devcontainer/devcontainer.json`
+### 9.3 Archivo `.devcontainer/devcontainer.json`
 
 Debe existir:
 
@@ -394,92 +316,42 @@ Contenido recomendado:
 }
 ```
 
-### 10.4 Si no existe `.devcontainer/devcontainer.json`
-
-Crearlo desde terminal:
-
-```bash
-mkdir -p .devcontainer
-nano .devcontainer/devcontainer.json
-```
-
-Pegar el contenido recomendado, guardar con:
-
-```text
-Ctrl + O
-Enter
-Ctrl + X
-```
-
-Luego subirlo:
-
-```bash
-git status
-git add .devcontainer/devcontainer.json
-git commit -m "Agregar configuracion de Codespaces"
-git push
-```
-
-### 10.5 Reconstruir el contenedor si modificaste el JSON
-
-En Codespaces:
-
-```text
-Ctrl + Shift + P
-```
-
-Buscar:
-
-```text
-Codespaces: Rebuild Container
-```
-
-o:
-
-```text
-Dev Containers: Rebuild Container
-```
-
-### 10.6 Instalar dependencias manualmente si es necesario
-
-Si el entorno no quedó listo automáticamente:
-
-```bash
-pip install --no-cache-dir -r requirements.txt
-python -m playwright install --with-deps chromium
-```
-
-Si ya están las dependencias Linux y solo falta el navegador:
-
-```bash
-python -m playwright install chromium
-```
-
-### 10.7 Ejecutar Streamlit en Codespaces
+### 9.4 Ejecutar Streamlit en Codespaces
 
 ```bash
 python -m streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 ```
 
-### 10.8 Abrir el puerto
+### 9.5 Abrir el puerto
 
-En la pestaña **Ports**, buscar:
+En la pestaña **Ports**, abrir el puerto:
 
 ```text
 8501
 ```
 
-Abrirlo en el navegador.
-
-El enlace generado será algo similar a:
+La URL será similar a:
 
 ```text
 https://nombre-del-codespace-8501.app.github.dev
 ```
 
+### 9.6 Resultado esperado en Codespaces
+
+La app debe mostrar:
+
+```text
+Modo actual: GitHub Codespaces
+```
+
+Y solo debe permitir:
+
+- Descargar archivo seleccionado.
+- Descargar ZIP completo.
+
 ---
 
-## 11. Qué es el puerto 8501
+## 10. Explicación del puerto 8501
 
 Streamlit usa por defecto el puerto:
 
@@ -487,79 +359,55 @@ Streamlit usa por defecto el puerto:
 8501
 ```
 
-En local se accede normalmente por:
+En local:
 
 ```text
 http://localhost:8501
 ```
 
-En Codespaces, `localhost` pertenece a la máquina remota de GitHub. Por eso GitHub debe reenviar el puerto `8501` y entregar una URL externa.
+En Codespaces, `localhost` pertenece a la máquina remota de GitHub. Por eso Codespaces reenvía el puerto y genera una URL externa.
 
-El comando recomendado es:
+Comando recomendado:
 
 ```bash
 python -m streamlit run app.py --server.address 0.0.0.0 --server.port 8501
 ```
 
-Donde:
-
-| Parte | Significado |
+| Parámetro | Explicación |
 |---|---|
-| `--server.port 8501` | Indica que Streamlit usará el puerto 8501. |
-| `--server.address 0.0.0.0` | Permite que Codespaces exponga la app fuera del contenedor. |
+| `--server.port 8501` | Define el puerto donde corre Streamlit. |
+| `--server.address 0.0.0.0` | Permite exponer la app fuera del contenedor. |
 
 ---
 
-## 12. Visibilidad del puerto en Codespaces
+## 11. Docker
 
-En la pestaña **Ports**, el puerto puede estar en:
+Docker permite ejecutar la app empaquetada en un contenedor. Esto ayuda a validar que la aplicación no dependa únicamente del entorno local de Windows.
 
-| Visibilidad | Significado |
-|---|---|
-| Private | Solo tú puedes abrir la app autenticado en GitHub. |
-| Organization | Solo miembros de la organización pueden abrirla, si aplica. |
-| Public | Cualquiera con el enlace puede abrirla. |
+### 11.1 Requisitos para Docker en Windows
 
-Recomendación para pruebas:
+Primero instalar WSL:
 
-```text
-Private
+```powershell
+wsl --install
+wsl --update
 ```
 
-Solo cambiar a `Public` cuando se quiera compartir una prueba controlada.
+Después reiniciar Windows.
 
----
+Luego instalar Docker Desktop y verificar:
 
-## 13. Uso en Codespaces
-
-En Codespaces la app debe mostrar:
-
-```text
-Modo actual: GitHub Codespaces
+```powershell
+docker --version
+docker compose version
 ```
 
-En este modo no deben aparecer:
+### 11.2 Ejecutar con Docker Compose
 
-- Abrir carpeta.
-- Abrir ubicación.
-- Abrir archivo.
+Desde la carpeta del proyecto:
 
-Solo deben aparecer:
-
-- Descargar archivo seleccionado.
-- Descargar ZIP completo.
-
-Esto es correcto porque Codespaces no puede abrir el Explorador de archivos del computador del usuario.
-
----
-
-## 14. Docker como alternativa de despliegue
-
-La v10 incluye `Dockerfile` y `docker-compose.yml`.
-
-### 14.1 Ejecutar con Docker Compose
-
-```bash
+```powershell
+cd C:\Users\ASUS\Documents\Github\descarga_iceberg
 docker compose up --build
 ```
 
@@ -569,19 +417,111 @@ Abrir:
 http://localhost:8501
 ```
 
-### 14.2 Ejecutar con Docker manualmente
+La app debe mostrar:
 
-```bash
-docker build -t iceberg-streamlit .
+```text
+Modo actual: Docker / Servidor
 ```
 
-```bash
-docker run --rm -p 8501:8501 -e ICEBERG_MODO_LOCAL=false -e ICEBERG_ENTORNO=docker iceberg-streamlit
+### 11.3 Detener Docker
+
+```powershell
+docker compose down
+```
+
+### 11.4 Dockerfile recomendado
+
+```dockerfile
+FROM mcr.microsoft.com/playwright/python:v1.55.0-noble
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt \
+    && python -m playwright install chromium
+
+COPY . .
+
+ENV ICEBERG_MODO_LOCAL=false
+ENV ICEBERG_ENTORNO=docker
+ENV PYTHONIOENCODING=utf-8
+ENV PYTHONUTF8=1
+
+EXPOSE 8501
+
+CMD ["python", "-m", "streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
+```
+
+### 11.5 `docker-compose.yml` recomendado
+
+```yaml
+services:
+  iceberg-streamlit:
+    build: .
+    container_name: iceberg-streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      ICEBERG_MODO_LOCAL: "false"
+      ICEBERG_ENTORNO: "docker"
+      PYTHONIOENCODING: "utf-8"
+      PYTHONUTF8: "1"
+    volumes:
+      - ./descargas_iceberg:/app/descargas_iceberg
+    restart: unless-stopped
+```
+
+### 11.6 Si Docker no resuelve `sig.cun.edu.co`
+
+Error:
+
+```text
+Page.goto: net::ERR_NAME_NOT_RESOLVED at https://sig.cun.edu.co/icebergrs/
+```
+
+Solución inicial:
+
+```yaml
+dns:
+  - 8.8.8.8
+  - 1.1.1.1
+```
+
+Ejemplo:
+
+```yaml
+services:
+  iceberg-streamlit:
+    build: .
+    container_name: iceberg-streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      ICEBERG_MODO_LOCAL: "false"
+      ICEBERG_ENTORNO: "docker"
+      PYTHONIOENCODING: "utf-8"
+      PYTHONUTF8: "1"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - ./descargas_iceberg:/app/descargas_iceberg
+    restart: unless-stopped
+```
+
+Luego:
+
+```powershell
+docker compose down
+docker compose up --build
 ```
 
 ---
 
-## 15. Archivo `requirements.txt` recomendado
+## 12. Archivos de configuración recomendados
+
+### 12.1 `requirements.txt`
 
 ```txt
 streamlit>=1.58.0
@@ -592,9 +532,7 @@ playwright
 odfpy
 ```
 
----
-
-## 16. Archivo `.streamlit/config.toml` recomendado
+### 12.2 `.streamlit/config.toml`
 
 ```toml
 [browser]
@@ -606,9 +544,7 @@ port = 8501
 address = "0.0.0.0"
 ```
 
----
-
-## 17. Archivo `.gitignore` recomendado
+### 12.3 `.gitignore`
 
 ```gitignore
 .env
@@ -625,226 +561,48 @@ __pycache__/
 *.csv
 ```
 
----
+### 12.4 `.dockerignore`
 
-## 18. Errores encontrados durante el desarrollo y solución
-
-### 18.1 PowerShell no permite activar `.venv`
-
-Error:
-
-```text
-Activate.ps1 porque la ejecución de scripts está deshabilitada en este sistema.
-```
-
-Solución:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\.venv\Scripts\activate
+```gitignore
+.env
+.venv/
+__pycache__/
+descargas_iceberg/
+*.log
+*.xls
+*.xlsx
+*.csv
+.git/
 ```
 
 ---
 
-### 18.2 `No module named playwright`
+## 13. Errores encontrados y soluciones
 
-Significa que Playwright no está instalado en el entorno activo.
-
-Solución:
-
-```powershell
-python -m pip install playwright python-dotenv
-python -m playwright install chromium
-```
+| Error | Causa | Solución |
+|---|---|---|
+| `Activate.ps1 ... ejecución de scripts deshabilitada` | PowerShell bloquea scripts | `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
+| `No module named playwright` | Playwright no está instalado en el entorno activo | `python -m pip install playwright` |
+| `Executable doesn't exist ... ms-playwright` | Falta descargar Chromium | `python -m playwright install chromium` |
+| `libatk-1.0.so.0` | Faltan dependencias Linux de Chromium | `python -m playwright install --with-deps chromium` |
+| `use_container_width will be removed` | API antigua de Streamlit | Cambiar a `width="stretch"` |
+| `StreamlitDuplicateElementKey` | Dos elementos con la misma key | Usar keys únicas o dejar un solo panel |
+| Bloque gigante `DeltaGenerator` | Uso de ternario con `st.success`/`st.warning` | Usar `if/else` normal |
+| Abrir carpeta no parece funcionar | Explorador puede quedar detrás del navegador | Usar `explorer.exe` |
+| Filtro devuelve 0 filas | Fecha/condiciones/columnas no coinciden | Revisar diagnóstico y columnas |
+| `UnicodeEncodeError cp1252` | Consola Windows no soporta caracteres | Usar `PYTHONIOENCODING=utf-8` |
+| `docker no se reconoce` | Docker Desktop no está instalado | Instalar Docker Desktop |
+| `no configuration file provided: not found` | Falta `docker-compose.yml` | Crear archivo en la raíz del proyecto |
+| `ERR_NAME_NOT_RESOLVED` en Docker | DNS del contenedor no resuelve ICEBERG | Agregar DNS o revisar red |
 
 ---
 
-### 18.3 Falta Chromium de Playwright en Codespaces
+## 14. Validación rápida de Playwright
 
-Error:
-
-```text
-Executable doesn't exist at /home/codespace/.cache/ms-playwright/...
-Looks like Playwright was just installed or updated.
-Please run the following command to download new browsers:
-playwright install
-```
-
-Solución:
+### Windows, Linux, Codespaces o Docker
 
 ```bash
-python -m playwright install chromium
-```
-
-Si también faltan dependencias Linux:
-
-```bash
-python -m playwright install --with-deps chromium
-```
-
----
-
-### 18.4 Falta librería Linux `libatk-1.0.so.0`
-
-Error:
-
-```text
-libatk-1.0.so.0: cannot open shared object file: No such file or directory
-```
-
-Significa que Chromium no puede iniciar porque faltan dependencias del sistema.
-
-Solución:
-
-```bash
-python -m playwright install --with-deps chromium
-```
-
-O:
-
-```bash
-sudo apt-get update
-python -m playwright install --with-deps chromium
-```
-
----
-
-### 18.5 Advertencia de Streamlit `use_container_width`
-
-Mensaje:
-
-```text
-Please replace use_container_width with width.
-use_container_width will be removed after 2025-12-31.
-```
-
-Solución:
-
-Cambiar:
-
-```python
-st.dataframe(df, use_container_width=True)
-```
-
-por:
-
-```python
-st.dataframe(df, width="stretch")
-```
-
----
-
-### 18.6 `StreamlitDuplicateElementKey`
-
-Error:
-
-```text
-StreamlitDuplicateElementKey: There are multiple elements with the same key
-```
-
-Causa:
-
-La app estaba mostrando dos veces el panel de archivos generados con la misma `key`.
-
-Solución:
-
-- Dejar un solo panel de archivos generados.
-- Usar keys únicas por contexto.
-- En v9/v10 se dejó un solo panel al final del filtrado.
-
----
-
-### 18.7 Mensaje gigante `DeltaGenerator`
-
-Síntoma:
-
-Después de presionar `Abrir carpeta`, la app mostraba un bloque enorme con información interna de Streamlit.
-
-Causa:
-
-Se usó una expresión tipo:
-
-```python
-st.success(mensaje) if ok else st.warning(mensaje)
-```
-
-Solución:
-
-Usar estructura normal:
-
-```python
-if ok:
-    st.success(mensaje)
-else:
-    st.warning(mensaje)
-```
-
----
-
-### 18.8 Botón abrir carpeta no parece abrir nada
-
-Causa posible:
-
-Windows puede abrir el Explorador detrás del navegador o no traerlo al frente.
-
-Solución implementada:
-
-- Usar `explorer.exe`.
-- Si la ruta es carpeta, abrir la carpeta.
-- Si la ruta es archivo, abrir la carpeta y seleccionar el archivo.
-
----
-
-### 18.9 El filtro devuelve 0 filas
-
-Causas posibles:
-
-- Fecha no existe en el consolidado.
-- Dependencia no coincide exactamente.
-- Condiciones de capacidad o inscritos dejan todo en cero.
-- Materias excluidas eliminan todos los registros.
-- Se estaba usando una columna incorrecta para capacidad.
-
-Solución aplicada en la app:
-
-- Usar la columna `Capacidad` antes que `Num_capacidad`.
-- Mostrar diagnóstico del filtro.
-- Cargar fechas y dependencias reales desde el consolidado.
-
----
-
-### 18.10 Error de codificación `cp1252` por emojis
-
-Error posible en Windows:
-
-```text
-UnicodeEncodeError: 'charmap' codec can't encode character
-```
-
-Solución:
-
-Configurar en la ejecución:
-
-```python
-env["PYTHONIOENCODING"] = "utf-8"
-env["PYTHONUTF8"] = "1"
-```
-
-O ejecutar en PowerShell:
-
-```powershell
-$env:PYTHONIOENCODING="utf-8"
-$env:PYTHONUTF8="1"
-```
-
----
-
-## 19. Validación rápida de Playwright
-
-### Windows, Linux o Codespaces
-
-```bash
-python - <<'PY'
+python - <<'PYTEST'
 from playwright.sync_api import sync_playwright
 
 with sync_playwright() as p:
@@ -853,7 +611,7 @@ with sync_playwright() as p:
     page.goto("https://example.com")
     print(page.title())
     browser.close()
-PY
+PYTEST
 ```
 
 Resultado esperado:
@@ -864,7 +622,7 @@ Example Domain
 
 ---
 
-## 20. Seguridad
+## 15. Seguridad
 
 No subir ni compartir:
 
@@ -888,133 +646,104 @@ Motivos:
 | `.streamlit/secrets.toml` | Puede contener secretos. |
 | `descargas_iceberg/` | Contiene reportes descargados desde ICEBERG. |
 | `.venv/` | Entorno local pesado y reconstruible. |
-| `*.xls`, `*.xlsx`, `*.csv` | Pueden contener datos académicos o personales. |
-| `*.log` | Puede contener rutas, errores o información sensible. |
+| `*.xls`, `*.xlsx`, `*.csv` | Pueden contener información académica o personal. |
+| `*.log` | Puede contener rutas, errores o datos técnicos sensibles. |
 
 ---
 
-## 21. Git: subir cambios a GitHub
-
-### 21.1 Revisar estado
-
-```powershell
-git status
-```
-
-Confirmar que no aparezcan:
-
-```text
-.env
-descargas_iceberg/
-```
-
-### 21.2 Agregar cambios
-
-```powershell
-git add .
-```
-
-### 21.3 Crear commit
-
-```powershell
-git commit -m "Actualizar README y configuracion v10"
-```
-
-### 21.4 Subir a GitHub
-
-```powershell
-git push
-```
-
-Flujo completo recomendado:
+## 16. Git: subir cambios a GitHub
 
 ```powershell
 git status
 git add .
-git commit -m "Actualizar documentacion v10"
+git commit -m "Actualizar README y documentacion de despliegue"
 git pull origin main
 git push origin main
 ```
 
 ---
 
-## 22. Qué probar antes de dar por estable una versión
+## 17. Checklist antes de considerar estable una versión
 
-### Local
+### Local Windows
 
-- La app abre en `http://localhost:8501`.
-- Muestra `Modo actual: Local Windows`.
-- Valida credenciales.
-- Descarga reportes.
-- Consolida.
-- Filtra.
-- Muestra archivos.
-- Abre carpeta.
-- Abre ubicación.
-- Abre archivo.
-- Descarga archivo.
-- Descarga ZIP.
+- [ ] La app abre en `http://localhost:8501`.
+- [ ] Muestra `Modo actual: Local Windows`.
+- [ ] Valida credenciales.
+- [ ] Descarga reportes.
+- [ ] Consolida.
+- [ ] Filtra.
+- [ ] Muestra archivos generados.
+- [ ] Abre carpeta.
+- [ ] Abre ubicación.
+- [ ] Abre archivo.
+- [ ] Descarga archivo seleccionado.
+- [ ] Descarga ZIP completo.
 
 ### Codespaces
 
-- El Codespace instala dependencias.
-- Playwright funciona.
-- La app abre por puerto `8501`.
-- Muestra `Modo actual: GitHub Codespaces`.
-- Valida credenciales.
-- Descarga reportes.
-- Consolida.
-- Filtra.
-- No muestra botones de abrir carpeta/archivo.
-- Descarga archivo seleccionado.
-- Descarga ZIP completo.
+- [ ] El Codespace instala dependencias.
+- [ ] Playwright funciona.
+- [ ] La app abre por puerto `8501`.
+- [ ] Muestra `Modo actual: GitHub Codespaces`.
+- [ ] Valida credenciales.
+- [ ] Descarga reportes.
+- [ ] Consolida.
+- [ ] Filtra.
+- [ ] No muestra botones de abrir carpeta/archivo.
+- [ ] Descarga archivo seleccionado.
+- [ ] Descarga ZIP completo.
+
+### Docker
+
+- [ ] Docker Desktop está instalado.
+- [ ] `docker compose up --build` levanta la app.
+- [ ] La app abre en `http://localhost:8501`.
+- [ ] Muestra `Modo actual: Docker / Servidor`.
+- [ ] Valida credenciales.
+- [ ] Descarga reportes.
+- [ ] Consolida.
+- [ ] Filtra.
+- [ ] No muestra botones locales.
+- [ ] Descarga archivo seleccionado.
+- [ ] Descarga ZIP completo.
 
 ---
 
-## 23. Recomendación de uso actual
+## 18. Recomendación actual
 
-Para pruebas controladas:
-
-```text
-GitHub Codespaces
-```
-
-Para uso diario individual:
-
-```text
-Local Windows
-```
-
-Para versión institucional más estable:
-
-```text
-Docker en servidor o máquina controlada
-```
+| Escenario | Recomendación |
+|---|---|
+| Trabajo diario propio | Local Windows |
+| Pruebas y demostraciones | GitHub Codespaces |
+| Candidato a versión estable | Docker |
+| Posible publicación simple | Evaluar Streamlit Cloud |
 
 ---
 
-## 24. Pendientes sugeridos para una versión futura
+## 19. Pendientes sugeridos para versiones futuras
 
-- Agregar página de ayuda dentro de la app.
 - Agregar historial de ejecuciones.
 - Agregar limpieza automática de carpetas antiguas.
-- Agregar control de roles si se comparte públicamente.
-- Evaluar despliegue final en Docker.
-- Evaluar Streamlit Cloud si ICEBERG permite acceso externo.
+- Agregar página de ayuda dentro de la app.
+- Agregar resumen final de ejecución.
+- Agregar control de usuarios si se comparte públicamente.
+- Evaluar Streamlit Cloud.
+- Evaluar Docker en nube o servidor institucional.
 - Agregar logs más amigables para usuario final.
-- Agregar resumen final de ejecución con filas descargadas, consolidadas y filtradas.
-- Agregar modo solo consulta para usuarios que no deban descargar desde ICEBERG.
+- Agregar modo solo consulta.
+- Agregar selector de reporte desde la interfaz.
 
 ---
 
-## 25. Autor / responsable
+## 20. Autor / responsable
 
 Equipo LITE - Escuela de Ingeniería de Sistemas.
 
 ---
 
-## 26. Nota final
+## 21. Nota final
 
-Esta documentación corresponde a la versión v10 del proyecto, validada en modo local y en GitHub Codespaces.
+Esta documentación corresponde a la versión v10 del proyecto, validada en modo local, GitHub Codespaces y Docker local.
 
-Si ICEBERG cambia su interfaz, nombres de botones, estructura de reportes o permisos, puede ser necesario ajustar el código de automatización.
+Si ICEBERG cambia su interfaz, nombres de botones, estructura de reportes, permisos o políticas de acceso, puede ser necesario ajustar el código de automatización.

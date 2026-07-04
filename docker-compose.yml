@@ -1,0 +1,16 @@
+services:
+  iceberg-streamlit:
+    build: .
+    container_name: iceberg-streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      ICEBERG_MODO_LOCAL: "false"
+      ICEBERG_ENTORNO: "docker"
+      PYTHONIOENCODING: "utf-8"
+      PYTHONUTF8: "1"
+    extra_hosts:
+      - "sig.cun.edu.co:190.184.201.13"
+    volumes:
+      - ./descargas_iceberg:/app/descargas_iceberg
+    restart: unless-stopped

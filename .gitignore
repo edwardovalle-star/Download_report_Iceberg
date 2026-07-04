@@ -1,11 +1,8 @@
 .env
-.venv/
-__pycache__/
+.streamlit/secrets.toml
 descargas_iceberg/
+__pycache__/
+*.pyc
+.venv/
+.env.local
 *.log
-*.png
-*.xls
-*.xlsx
-Consolidado_Final*
-Filtrado_Ingenieria_*
-Filtrado_TodasLasEscuelas_*
