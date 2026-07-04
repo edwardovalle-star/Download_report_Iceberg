@@ -1,11 +1,34 @@
+"""
+Archivo: 3_2_FiltrarTodasEscuelas.py
+Descripción:
+    Variante del filtro que trabaja sobre todas las escuelas.
+
+Diferencia frente a 3_Filtrar.py:
+    - No aplica filtro por dependencia.
+    - Conserva filtros por fecha, capacidad, inscritos y patrón de materia.
+
+Salida:
+    - Filtrado_TodasLasEscuelas_YYYYMMDD_HHMMSS.xlsx
+    - Filtrado_TodasLasEscuelas_YYYYMMDD_HHMMSS.csv
+"""
+
 import pandas as pd
 import os
 from datetime import datetime
 import config
 
+# IMPORTANTE:
+# Los filtros usan posiciones de columna del archivo consolidado.
+# Si ICEBERG cambia el orden de columnas, estos índices deben actualizarse.
+#
+# df.iloc[:, 6]  -> Columna G  -> Materia
+# df.iloc[:, 12] -> Columna M  -> Capacidad
+# df.iloc[:, 13] -> Columna N  -> Inscritos
+# df.iloc[:, 20] -> Columna U  -> Fecha inicio grupo
+# 
 # --- CONFIGURACIÓN DEL FILTRO ---
 # Define aquí el valor de fecha para filtrar (columna U: "Fec_inicio_grupo")
-VALOR_FECHA_FILTRO = "02/02/2026"  # Formato: DD/MM/YYYY
+VALOR_FECHA_FILTRO = os.getenv("ICEBERG_FECHA_FILTRO", "02/02/2026")  # Formato: DD/MM/YYYY
 
 # --- CONFIGURACIÓN AVANZADA (Opcional) ---
 # Si necesitas filtrar por múltiples fechas, descomenta y edita:
@@ -187,6 +210,8 @@ def filtrar_datos():
         condiciones_texto.append(f'Materia NO contiene "{PATRON_EXCLUIR}"')
 
         # 3. Excluir materias específicas
+        # Se deja en True porque esta versión no excluye materias específicas.
+        # Si se deja en False, el AND final no devolverá registros.
         condicion_materias = True
         # for materia in MATERIAS_EXCLUIDAS:
         #     condicion_materias = condicion_materias & (df.iloc[:, 6] != materia)
@@ -210,6 +235,7 @@ def filtrar_datos():
             condiciones_texto.append(f'Fecha inicio = "{VALOR_FECHA_FILTRO}"')
 
         # Combinar todas las condiciones
+        # Todas se unen con AND (&): un registro queda solo si cumple todas las reglas.
         condicion_final = (
             #condicion_dependencia &
             condicion_practica &

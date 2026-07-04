@@ -1,11 +1,36 @@
+"""
+Archivo: 3_Filtrar.py
+Descripción:
+    Filtra el consolidado final para una dependencia específica.
+
+Requisitos:
+    - Ejecutar primero 1_Descargar.py.
+    - Ejecutar luego 2_Consolidar.py.
+    - Tener disponible Consolidado_Final_OcupacionDocente.xlsx.
+
+Salida:
+    - Filtrado_Ingenieria_YYYYMMDD_HHMMSS.xlsx
+    - Filtrado_Ingenieria_YYYYMMDD_HHMMSS.csv
+"""
+
 import pandas as pd
 import os
 from datetime import datetime
 import config
 
+# IMPORTANTE:
+# Los filtros usan posiciones de columna del archivo consolidado.
+# Si ICEBERG cambia el orden de columnas, estos índices deben actualizarse.
+#
+# df.iloc[:, 6]  -> Columna G  -> Materia
+# df.iloc[:, 12] -> Columna M  -> Capacidad
+# df.iloc[:, 13] -> Columna N  -> Inscritos
+# df.iloc[:, 20] -> Columna U  -> Fecha inicio grupo
+# df.iloc[:, 40] -> Columna AO -> Dependencia
+
 # --- CONFIGURACIÓN DEL FILTRO ---
 # Define aquí el valor de fecha para filtrar (columna U: "Fec_inicio_grupo")
-VALOR_FECHA_FILTRO = "30/03/2026"  # Formato: DD/MM/YYYY
+VALOR_FECHA_FILTRO = os.getenv("ICEBERG_FECHA_FILTRO", "30/03/2026")  # Formato: DD/MM/YYYY
 
 # --- CONFIGURACIÓN AVANZADA (Opcional) ---
 # Si necesitas filtrar por múltiples fechas, descomenta y edita:
@@ -210,6 +235,7 @@ def filtrar_datos():
             condiciones_texto.append(f'Fecha inicio = "{VALOR_FECHA_FILTRO}"')
         
         # Combinar todas las condiciones
+        # Todas se unen con AND (&): un registro queda solo si cumple todas las reglas.
         condicion_final = (
             condicion_dependencia &
             condicion_practica &

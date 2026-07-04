@@ -1,3 +1,14 @@
+"""
+Archivo: 2_Consolidar.py
+Descripción:
+    Consolida los reportes descargados por 1_Descargar.py.
+
+Notas técnicas:
+    - ICEBERG puede descargar archivos con extensión .xls que realmente son texto plano.
+    - Por eso el script intenta leerlos con pandas.read_csv usando tabulaciones y separador automático.
+    - El resultado se guarda como Excel real .xlsx y como CSV.
+"""
+
 import os
 import glob
 import pandas as pd
@@ -32,6 +43,9 @@ def obtener_carpeta_mas_reciente():
     carpetas.sort(key=lambda x: x[1], reverse=True)
     return carpetas[0][0]
 
+# Algunos archivos .xls de ICEBERG no son Excel reales.
+# Pueden ser texto plano separado por tabulaciones o comas.
+# Esta función intenta interpretarlos correctamente.
 def leer_falso_excel(ruta_archivo):
     """
     Intenta leer un archivo de texto plano disfrazado de Excel (.xls).
@@ -75,6 +89,7 @@ def limpiar_ids_enteros(df):
             # 1. Asegurar que es string
             df[col] = df[col].astype(str)
             # 2. Reemplazar '.0' al final de la cadena
+            # Elimina sufijo .0 en IDs. Ejemplo: 123456.0 -> 123456
             df[col] = df[col].str.replace(r'\.0$', '', regex=True)
             # 3. Limpiar valores 'nan' o 'None' que quedan como texto
             df[col] = df[col].replace({'nan': '', 'None': '', '<NA>': ''})
