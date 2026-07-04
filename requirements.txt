@@ -1,6 +1,6 @@
-playwright
-python-dotenv
+streamlit>=1.58.0
 pandas
 openpyxl
+python-dotenv
+playwright
 odfpy
-streamlit

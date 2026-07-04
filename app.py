@@ -10,6 +10,12 @@ import pandas as pd
 import streamlit as st
 
 try:
+    from cloud_runtime import preparar_playwright_cloud
+    preparar_playwright_cloud()
+except Exception as e:
+    st.warning(f"No fue posible preparar Playwright automáticamente: {e}")
+
+try:
     from playwright.sync_api import sync_playwright
 except Exception:
     sync_playwright = None
@@ -21,10 +27,10 @@ ICEBERG_LOGIN_URL = "https://sig.cun.edu.co/icebergrs/"
 # Modo de ejecución:
 # - true  : ejecución local en Windows. Habilita abrir carpeta/archivo.
 # - false : ejecución web/servidor/Codespaces/Docker. Solo muestra descargas.
-MODO_LOCAL = os.getenv("ICEBERG_MODO_LOCAL", "false").strip().lower() in {"1", "true", "yes", "si", "sí"}
+MODO_LOCAL = os.getenv("ICEBERG_MODO_LOCAL", "true").strip().lower() in {"1", "true", "yes", "si", "sí"}
 
 # Etiqueta visual para que el usuario identifique dónde está corriendo.
-ENTORNO_APP = os.getenv("ICEBERG_ENTORNO", "codespaces").strip().lower()
+ENTORNO_APP = os.getenv("ICEBERG_ENTORNO", "local").strip().lower()
 
 
 
@@ -916,6 +922,7 @@ def mostrar_descarga():
         periodos = st.multiselect(
             "Periodos académicos",
             PERIODOS_UI,
+            default=["26V03", "26P03", "26T03"],
         )
 
         ejecutar = st.form_submit_button("Descargar y consolidar")
