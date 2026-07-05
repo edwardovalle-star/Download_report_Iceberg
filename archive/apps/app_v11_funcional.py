@@ -74,19 +74,10 @@ ICEBERG_LOGIN_URL = "https://sig.cun.edu.co/icebergrs/"
 # Modo de ejecución:
 # - true  : ejecución local en Windows. Habilita abrir carpeta/archivo.
 # - false : ejecución web/servidor/Codespaces/Docker. Solo muestra descargas.
-MODO_LOCAL = os.getenv("ICEBERG_MODO_LOCAL", "true").strip().lower() in {"1", "true", "yes", "si", "sí"}
+MODO_LOCAL = os.getenv("ICEBERG_MODO_LOCAL", "false").strip().lower() in {"1", "true", "yes", "si", "sí"}
 
 # Etiqueta visual para que el usuario identifique dónde está corriendo.
-ENTORNO_APP = os.getenv("ICEBERG_ENTORNO", "local").strip().lower()
-
-# Tiempo máximo de inactividad.
-# En Streamlit no se cierra la pestaña del navegador, pero sí se invalida la sesión interna.
-try:
-    INACTIVIDAD_MINUTOS = int(os.getenv("ICEBERG_INACTIVIDAD_MINUTOS", "30"))
-except ValueError:
-    INACTIVIDAD_MINUTOS = 30
-
-INACTIVIDAD_SEGUNDOS = max(INACTIVIDAD_MINUTOS, 0) * 60
+ENTORNO_APP = os.getenv("ICEBERG_ENTORNO", "streamlit_cloud").strip().lower()
 
 
 
@@ -126,100 +117,6 @@ def etiqueta_modo_ejecucion() -> str:
     return "Web / Servidor"
 
 
-def timestamp_actual() -> float:
-    return datetime.now().timestamp()
-
-
-def registrar_actividad() -> None:
-    st.session_state["ultima_actividad_ts"] = timestamp_actual()
-
-
-def minutos_desde_ultima_actividad() -> float:
-    ultima = st.session_state.get("ultima_actividad_ts")
-
-    if not ultima:
-        return 0.0
-
-    try:
-        return max((timestamp_actual() - float(ultima)) / 60, 0.0)
-    except Exception:
-        return 0.0
-
-
-def limpiar_claves_por_prefijo(prefijos: tuple[str, ...]) -> None:
-    for clave in list(st.session_state.keys()):
-        if any(str(clave).startswith(prefijo) for prefijo in prefijos):
-            del st.session_state[clave]
-
-
-def limpiar_busqueda(mensaje: str = "Búsqueda limpiada. Puedes iniciar una nueva consulta sin volver a validar credenciales.") -> None:
-    """
-    Limpia resultados, filtros y selección de archivos sin cerrar sesión.
-    Mantiene usuario validado y credenciales en memoria para una nueva búsqueda.
-    """
-    limpiar_claves_por_prefijo(
-        (
-            "mensaje_archivos_",
-            "tabla_archivos_",
-            "periodos_academicos_",
-            "dependencias_filtro_",
-            "fechas_filtro_",
-            "excluir_practica_",
-            "excluir_historicas_",
-            "capacidad_mayor_cero_",
-            "inscritos_mayor_cero_",
-        )
-    )
-
-    st.session_state["consolidado_path"] = None
-    st.session_state["ultimo_error"] = ""
-    st.session_state["ultima_ejecucion_ok"] = False
-    st.session_state["busqueda_nonce"] = st.session_state.get("busqueda_nonce", 0) + 1
-    st.session_state["filtro_nonce"] = st.session_state.get("filtro_nonce", 0) + 1
-    st.session_state["mensaje_sesion"] = mensaje
-    registrar_actividad()
-
-
-def cerrar_sesion_completa(mensaje: str = "Sesión cerrada correctamente.") -> None:
-    """
-    Cierra la sesión interna de Streamlit y elimina credenciales guardadas en memoria.
-    """
-    for clave in list(st.session_state.keys()):
-        del st.session_state[clave]
-
-    st.session_state["mensaje_sesion"] = mensaje
-
-
-def verificar_timeout_inactividad() -> None:
-    """
-    Si la sesión validada supera el tiempo de inactividad, se cierra automáticamente.
-    La verificación ocurre cuando el usuario vuelve a interactuar con la app.
-    """
-    if INACTIVIDAD_SEGUNDOS <= 0:
-        return
-
-    if not st.session_state.get("login_validado"):
-        return
-
-    ultima = st.session_state.get("ultima_actividad_ts")
-
-    if not ultima:
-        registrar_actividad()
-        return
-
-    try:
-        segundos_inactivos = timestamp_actual() - float(ultima)
-    except Exception:
-        registrar_actividad()
-        return
-
-    if segundos_inactivos >= INACTIVIDAD_SEGUNDOS:
-        cerrar_sesion_completa(
-            f"La sesión fue cerrada automáticamente por inactividad superior a {INACTIVIDAD_MINUTOS} minutos."
-        )
-        st.rerun()
-
-
 
 def inicializar_estado():
     defaults = {
@@ -229,10 +126,6 @@ def inicializar_estado():
         "consolidado_path": None,
         "ultimo_error": "",
         "ultima_ejecucion_ok": False,
-        "ultima_actividad_ts": timestamp_actual(),
-        "busqueda_nonce": 0,
-        "filtro_nonce": 0,
-        "mensaje_sesion": "",
     }
 
     for clave, valor in defaults.items():
@@ -273,11 +166,7 @@ def limpiar_sesion_login():
     st.session_state["login_validado"] = False
     st.session_state["iceberg_user"] = ""
     st.session_state["iceberg_pass"] = ""
-    st.session_state["consolidado_path"] = None
     st.session_state["ultimo_error"] = ""
-    st.session_state["ultima_ejecucion_ok"] = False
-    st.session_state["busqueda_nonce"] = st.session_state.get("busqueda_nonce", 0) + 1
-    st.session_state["filtro_nonce"] = st.session_state.get("filtro_nonce", 0) + 1
 
 
 def mostrar_sidebar():
@@ -288,18 +177,8 @@ def mostrar_sidebar():
             st.success("Login validado")
             st.write(f"Usuario: `{st.session_state['iceberg_user']}`")
 
-            st.caption("Acciones de sesión")
-
-            if st.button("Nueva búsqueda", key="btn_nueva_busqueda"):
-                limpiar_busqueda()
-                st.rerun()
-
-            if st.button("Cambiar credenciales", key="btn_cambiar_credenciales"):
-                cerrar_sesion_completa("Ingresa nuevamente tus credenciales.")
-                st.rerun()
-
-            if st.button("Cerrar sesión", key="btn_cerrar_sesion"):
-                cerrar_sesion_completa("Sesión cerrada manualmente.")
+            if st.button("Cambiar credenciales"):
+                limpiar_sesion_login()
                 st.rerun()
         else:
             st.warning("Login pendiente")
@@ -315,18 +194,6 @@ def mostrar_sidebar():
 
         if not MODO_LOCAL:
             st.caption("Las acciones de abrir carpeta/archivo se ocultan en modo web.")
-
-        st.divider()
-        st.caption("Seguridad de sesión")
-
-        if INACTIVIDAD_SEGUNDOS > 0:
-            st.write(f"Cierre automático: `{INACTIVIDAD_MINUTOS} min`")
-            if st.session_state.get("login_validado"):
-                st.caption(f"Última actividad hace {minutos_desde_ultima_actividad():.1f} min")
-        else:
-            st.write("Cierre automático: `desactivado`")
-
-        st.divider()
 
         if st.session_state["ultima_ejecucion_ok"]:
             st.success("Última ejecución correcta")
@@ -1107,7 +974,6 @@ def mostrar_descarga():
         periodos = st.multiselect(
             "Periodos académicos",
             PERIODOS_UI,
-            key=f"periodos_academicos_{st.session_state.get('busqueda_nonce', 0)}",
         )
 
         ejecutar = st.form_submit_button("Descargar y consolidar")
@@ -1203,19 +1069,15 @@ def mostrar_panel_filtrado(consolidado_path: Path):
 
     fechas_disponibles = preparar_fechas_para_ui(df[col_fecha])
 
-    nonce_filtro = st.session_state.get("filtro_nonce", 0)
-
     with st.form("form_filtrado"):
         dependencias = st.multiselect(
             "Dependencias / carreras encontradas",
             dependencias_disponibles,
-            key=f"dependencias_filtro_{nonce_filtro}_{consolidado_path.name}",
         )
 
         fechas = st.multiselect(
             "Fechas de inicio encontradas",
             fechas_disponibles,
-            key=f"fechas_filtro_{nonce_filtro}_{consolidado_path.name}",
         )
 
         st.caption("Condiciones adicionales")
@@ -1226,7 +1088,6 @@ def mostrar_panel_filtrado(consolidado_path: Path):
             excluir_practica = st.checkbox(
                 "Excluir PRACTICA",
                 value=True,
-                key=f"excluir_practica_{nonce_filtro}_{consolidado_path.name}",
             )
 
         with col2:
@@ -1234,21 +1095,18 @@ def mostrar_panel_filtrado(consolidado_path: Path):
                 "Excluir materias históricas",
                 value=True,
                 help="Replica las exclusiones del 3_Filtrar.py anterior.",
-                key=f"excluir_historicas_{nonce_filtro}_{consolidado_path.name}",
             )
 
         with col3:
             capacidad_mayor_cero = st.checkbox(
                 "Capacidad != 0",
                 value=True,
-                key=f"capacidad_mayor_cero_{nonce_filtro}_{consolidado_path.name}",
             )
 
         with col4:
             inscritos_mayor_cero = st.checkbox(
                 "Inscritos != 0",
                 value=True,
-                key=f"inscritos_mayor_cero_{nonce_filtro}_{consolidado_path.name}",
             )
 
         aplicar = st.form_submit_button("Aplicar filtro")
@@ -1333,17 +1191,11 @@ def main():
     )
 
     inicializar_estado()
-    verificar_timeout_inactividad()
-    registrar_actividad()
     aplicar_estilos()
 
     st.title("ICEBERG - Reportes")
     st.caption("Descarga, consolidación, filtrado y acceso rápido a archivos generados.")
     st.caption(f"Modo actual: {etiqueta_modo_ejecucion()}")
-
-    if st.session_state.get("mensaje_sesion"):
-        st.info(st.session_state["mensaje_sesion"])
-        st.session_state["mensaje_sesion"] = ""
 
     mostrar_sidebar()
 
