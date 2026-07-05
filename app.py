@@ -9,6 +9,13 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+
+from session_workspace import (
+    inicializar_workspace_sesion,
+    registrar_consolidado_sesion,
+    mostrar_consolidados_sesion,
+    mostrar_consolidado_activo_sesion,
+)
 def asegurar_chromium_playwright() -> tuple[bool, str]:
     """
     En Streamlit Cloud, pip instala la librería Playwright,
@@ -173,6 +180,11 @@ def limpiar_busqueda(mensaje: str = "Búsqueda limpiada. Puedes iniciar una nuev
 
     st.session_state["consolidado_path"] = None
     st.session_state["consolidado_origen"] = ""
+    st.session_state["consolidado_activo_id"] = ""
+    st.session_state["periodos_consolidado_activo"] = []
+    st.session_state["fecha_consolidado_activo"] = ""
+    st.session_state["archivo_consolidado_activo"] = ""
+    st.session_state["carpeta_consolidado_activo"] = ""
     st.session_state["resumen_ejecucion_actual"] = None
     st.session_state["ultimo_error"] = ""
     st.session_state["ultima_ejecucion_ok"] = False
@@ -1161,6 +1173,17 @@ def mostrar_descarga():
         st.session_state["consolidado_path"] = str(consolidado)
         st.session_state["consolidado_origen"] = "descarga"
         st.session_state["ultima_ejecucion_ok"] = True
+        registrar_consolidado_sesion(
+            consolidado_path=consolidado,
+            periodos=(
+                locals().get("periodos_seleccionados")
+                or locals().get("periodos")
+                or locals().get("periodos_academicos")
+                or []
+            ),
+            origen="descarga",
+            mensaje="Descarga y consolidacion finalizada correctamente.",
+        )
         st.session_state["resumen_ejecucion_actual"] = construir_resumen_ejecucion_actual(
             estado="OK",
             origen="descarga",
@@ -1409,25 +1432,26 @@ def mostrar_resumen_ejecucion_actual() -> None:
 
 def mostrar_ultimo_consolidado():
     """
-    Opcion global desactivada para evitar que un usuario cargue
-    consolidados generados por otra sesion.
+    Desactivado para uso compartido.
+    Evita que un usuario cargue consolidados globales generados por otra sesion.
     """
     return
 
 def main():
     st.set_page_config(
         page_title="ICEBERG - Reportes",
-        page_icon="??",
+        page_icon="\U0001f4ca",
         layout="wide",
     )
 
     inicializar_estado()
+    inicializar_workspace_sesion()
     verificar_timeout_inactividad()
     registrar_actividad()
     aplicar_estilos()
 
     st.title("ICEBERG - Reportes")
-    st.caption("Descarga, consolidación, filtrado y acceso rápido a archivos generados.")
+    st.caption("Descarga, consolidaci\u00f3n, filtrado y acceso r\u00e1pido a archivos generados.")
     st.caption(f"Modo actual: {etiqueta_modo_ejecucion()}")
 
     if st.session_state.get("mensaje_sesion"):
@@ -1441,27 +1465,17 @@ def main():
         return
 
     consolidado_session = st.session_state.get("consolidado_path")
-    consolidado_origen = st.session_state.get("consolidado_origen", "")
 
-    if consolidado_session and consolidado_origen == "existente":
-        st.info(
-            "Est?s trabajando con el último consolidado existente. "
-            "No se ejecutar? una nueva descarga."
-        )
+    if consolidado_session:
+        mostrar_consolidado_activo_sesion()
         mostrar_panel_filtrado(Path(consolidado_session))
-
-    elif consolidado_session:
-        mostrar_descarga()
-        mostrar_panel_filtrado(Path(consolidado_session))
-
+        mostrar_consolidados_sesion()
     else:
         mostrar_descarga()
-        mostrar_ultimo_consolidado()
+        mostrar_consolidados_sesion()
 
     if st.session_state["ultimo_error"]:
         st.error(st.session_state["ultimo_error"])
-
-    mostrar_resumen_ejecucion_actual()
 
 if __name__ == "__main__":
     try:
