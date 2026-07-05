@@ -75,10 +75,10 @@ ICEBERG_LOGIN_URL = "https://sig.cun.edu.co/icebergrs/"
 # Modo de ejecución:
 # - true  : ejecución local en Windows. Habilita abrir carpeta/archivo.
 # - false : ejecución web/servidor/Codespaces/Docker. Solo muestra descargas.
-MODO_LOCAL = os.getenv("ICEBERG_MODO_LOCAL", "true").strip().lower() in {"1", "true", "yes", "si", "sí"}
+MODO_LOCAL = os.getenv("ICEBERG_MODO_LOCAL", "false").strip().lower() in {"1", "true", "yes", "si", "sí"}
 
 # Etiqueta visual para que el usuario identifique dónde está corriendo.
-ENTORNO_APP = os.getenv("ICEBERG_ENTORNO", "local").strip().lower()
+ENTORNO_APP = os.getenv("ICEBERG_ENTORNO", "streamlit_cloud").strip().lower()
 
 
 
