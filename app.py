@@ -173,6 +173,7 @@ def limpiar_busqueda(mensaje: str = "Búsqueda limpiada. Puedes iniciar una nuev
 
     st.session_state["consolidado_path"] = None
     st.session_state["consolidado_origen"] = ""
+    st.session_state["resumen_ejecucion_actual"] = None
     st.session_state["ultimo_error"] = ""
     st.session_state["ultima_ejecucion_ok"] = False
     st.session_state["busqueda_nonce"] = st.session_state.get("busqueda_nonce", 0) + 1
@@ -235,6 +236,7 @@ def inicializar_estado():
         "busqueda_nonce": 0,
         "filtro_nonce": 0,
         "mensaje_sesion": "",
+        "resumen_ejecucion_actual": None,
     }
 
     for clave, valor in defaults.items():
@@ -1159,6 +1161,18 @@ def mostrar_descarga():
         st.session_state["consolidado_path"] = str(consolidado)
         st.session_state["consolidado_origen"] = "descarga"
         st.session_state["ultima_ejecucion_ok"] = True
+        st.session_state["resumen_ejecucion_actual"] = construir_resumen_ejecucion_actual(
+            estado="OK",
+            origen="descarga",
+            periodos=(
+                locals().get("periodos_seleccionados")
+                or locals().get("periodos")
+                or locals().get("periodos_academicos")
+                or []
+            ),
+            consolidado_path=consolidado,
+            mensaje="Descarga y consolidacion finalizada correctamente.",
+        )
 
         st.success("Descarga y consolidación finalizadas. Ya puedes filtrar.")
         st.rerun()
@@ -1315,34 +1329,90 @@ def mostrar_panel_filtrado(consolidado_path: Path):
     mostrar_archivos_generados(consolidado_path.parent, contexto="principal")
 
 
-def mostrar_ultimo_consolidado():
+def construir_resumen_ejecucion_actual(
+    estado: str,
+    origen: str,
+    periodos=None,
+    consolidado_path=None,
+    mensaje: str = "",
+) -> dict:
     """
-    Permite reutilizar el último consolidado existente,
-    pero solo despu?s de validar credenciales.
+    Construye un resumen visible solo en la sesion actual del usuario.
+    No escribe archivos globales y no comparte informacion con otros usuarios.
     """
-    if not st.session_state.get("login_validado"):
+    if periodos is None:
+        periodos = []
+
+    if isinstance(periodos, str):
+        periodos = [periodos]
+
+    consolidado_str = ""
+    carpeta_str = ""
+
+    if consolidado_path:
+        consolidado = Path(consolidado_path)
+        consolidado_str = str(consolidado)
+        carpeta_str = str(consolidado.parent)
+
+    return {
+        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "usuario": st.session_state.get("iceberg_user", ""),
+        "entorno": etiqueta_modo_ejecucion(),
+        "estado": estado,
+        "origen": origen,
+        "periodos": list(periodos) if isinstance(periodos, (list, tuple, set)) else [str(periodos)],
+        "consolidado": consolidado_str,
+        "carpeta": carpeta_str,
+        "mensaje": mensaje,
+    }
+
+
+def mostrar_resumen_ejecucion_actual() -> None:
+    """
+    Muestra solo el resumen de la ejecucion actual de la sesion.
+    """
+    resumen = st.session_state.get("resumen_ejecucion_actual")
+
+    if not resumen:
         return
 
-    consolidado_existente = buscar_consolidado_mas_reciente()
-
-    if not consolidado_existente:
-        return
-
-    with st.expander("Usar último consolidado existente", expanded=False):
+    with st.expander("Resumen de ejecucion actual", expanded=False):
         st.caption(
-            "Esta opción permite filtrar el último consolidado generado "
-            "sin ejecutar una nueva descarga desde ICEBERG."
+            "Este resumen pertenece solo a esta sesion. "
+            "No es una bitacora global ni muestra ejecuciones de otros usuarios."
         )
 
-        with st.expander("Ver ruta técnica del consolidado", expanded=False):
-            st.code(str(consolidado_existente), language="text")
+        periodos = resumen.get("periodos", [])
+        periodos_texto = ", ".join(periodos) if isinstance(periodos, list) else str(periodos)
 
-        if st.button("Cargar último consolidado para filtrar", key="btn_cargar_ultimo_consolidado"):
-            st.session_state["consolidado_path"] = str(consolidado_existente)
-            st.session_state["consolidado_origen"] = "existente"
-            st.session_state["ultima_ejecucion_ok"] = True
-            st.session_state["ultimo_error"] = ""
-            st.rerun()
+        datos = {
+            "Fecha": resumen.get("fecha", ""),
+            "Estado": resumen.get("estado", ""),
+            "Origen": resumen.get("origen", ""),
+            "Usuario": resumen.get("usuario", ""),
+            "Entorno": resumen.get("entorno", ""),
+            "Periodos": periodos_texto,
+            "Mensaje": resumen.get("mensaje", ""),
+        }
+
+        st.dataframe(
+            pd.DataFrame([datos]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        consolidado = resumen.get("consolidado", "")
+        if consolidado:
+            with st.expander("Ver ruta tecnica de esta ejecucion", expanded=False):
+                st.code(consolidado, language="text")
+
+
+def mostrar_ultimo_consolidado():
+    """
+    Opcion global desactivada para evitar que un usuario cargue
+    consolidados generados por otra sesion.
+    """
+    return
 
 def main():
     st.set_page_config(
@@ -1390,6 +1460,8 @@ def main():
 
     if st.session_state["ultimo_error"]:
         st.error(st.session_state["ultimo_error"])
+
+    mostrar_resumen_ejecucion_actual()
 
 if __name__ == "__main__":
     try:
