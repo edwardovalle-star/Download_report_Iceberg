@@ -9,6 +9,54 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+def asegurar_chromium_playwright() -> tuple[bool, str]:
+    """
+    En Streamlit Cloud, pip instala la librería Playwright,
+    pero no siempre descarga el navegador Chromium.
+
+    Esta función descarga Chromium una sola vez por entorno.
+    """
+    if sync_playwright is None:
+        return False, "Playwright no está instalado. Revisa requirements.txt."
+
+    es_streamlit_cloud = (
+        os.getenv("ICEBERG_ENTORNO", "").strip().lower() in {"streamlit_cloud", "streamlit", "cloud"}
+        or Path("/mount/src").exists()
+    )
+
+    if not es_streamlit_cloud:
+        return True, "No aplica instalación automática de Chromium fuera de Streamlit Cloud."
+
+    marcador = Path.home() / ".cache" / "iceberg_playwright_chromium_ok.txt"
+
+    if marcador.exists():
+        return True, "Chromium de Playwright ya estaba preparado."
+
+    try:
+        resultado = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+
+        if resultado.returncode != 0:
+            detalle = (resultado.stderr or resultado.stdout or "").strip()
+            return False, (
+                "No fue posible instalar Chromium de Playwright en Streamlit Cloud.\n\n"
+                f"Detalle técnico:\n{detalle[-2000:]}"
+            )
+
+        marcador.parent.mkdir(parents=True, exist_ok=True)
+        marcador.write_text("ok", encoding="utf-8")
+
+        return True, "Chromium de Playwright fue instalado correctamente."
+
+    except Exception as e:
+        return False, f"No fue posible preparar Chromium de Playwright: {e}"
+
+
+
 try:
     from cloud_runtime import preparar_playwright_cloud
     preparar_playwright_cloud()
@@ -164,7 +212,12 @@ def validar_credenciales_iceberg(usuario: str, password: str) -> tuple[bool, str
     y luego quede sin respuesta clara si el login falla.
     """
     if sync_playwright is None:
-        return False, "Playwright no está instalado o no está disponible. Ejecuta: python -m playwright install chromium"
+        return False, "Playwright no está instalado o no está disponible. Revisa requirements.txt."
+
+    ok_chromium, mensaje_chromium = asegurar_chromium_playwright()
+
+    if not ok_chromium:
+        return False, mensaje_chromium
 
     browser = None
 
