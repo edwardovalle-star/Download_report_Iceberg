@@ -16,6 +16,18 @@ from session_workspace import (
     mostrar_consolidados_sesion,
     mostrar_consolidado_activo_sesion,
 )
+
+from filter_workspace import (
+    limpiar_resultado_filtro_si_cambia_consolidado,
+    registrar_resultado_filtro_sesion,
+    mostrar_resultado_filtro_sesion,
+)
+
+from advanced_filters import (
+    aplicar_filtros_avanzados,
+    construir_resumen_filtros_avanzados,
+    mostrar_filtros_avanzados_opcionales,
+)
 def asegurar_chromium_playwright() -> tuple[bool, str]:
     """
     En Streamlit Cloud, pip instala la librería Playwright,
@@ -1215,6 +1227,8 @@ def mostrar_panel_filtrado(consolidado_path: Path):
         unsafe_allow_html=True,
     )
 
+    limpiar_resultado_filtro_si_cambia_consolidado(consolidado_path)
+
     st.caption(f"Consolidado detectado: `{consolidado_path}`")
 
     try:
@@ -1223,7 +1237,16 @@ def mostrar_panel_filtrado(consolidado_path: Path):
         st.error(f"No fue posible leer el consolidado: {e}")
         return
 
-    st.info(f"Consolidado cargado: {len(df):,} filas y {len(df.columns):,} columnas.")
+    periodos_base = st.session_state.get("periodos_consolidado_activo", [])
+    periodos_texto = ", ".join(periodos_base) if isinstance(periodos_base, list) else str(periodos_base)
+
+    if periodos_texto:
+        st.info(
+            f"Consolidado cargado: {len(df):,} filas y {len(df.columns):,} columnas. "
+            f"Periodos base: {periodos_texto}."
+        )
+    else:
+        st.info(f"Consolidado cargado: {len(df):,} filas y {len(df.columns):,} columnas.")
 
     try:
         columnas = obtener_columnas_filtro(df)
@@ -1242,59 +1265,84 @@ def mostrar_panel_filtrado(consolidado_path: Path):
     fechas_disponibles = preparar_fechas_para_ui(df[col_fecha])
 
     nonce_filtro = st.session_state.get("filtro_nonce", 0)
+    key_consolidado = str(abs(hash(str(consolidado_path))))[:10]
+    key_base = f"{nonce_filtro}_{consolidado_path.name}_{key_consolidado}"
 
-    with st.form("form_filtrado"):
-        dependencias = st.multiselect(
-            "Dependencias / carreras encontradas",
-            dependencias_disponibles,
-            key=f"dependencias_filtro_{nonce_filtro}_{consolidado_path.name}",
+    st.markdown("#### Filtros principales")
+
+    dependencias = st.multiselect(
+        "Dependencias / carreras encontradas",
+        dependencias_disponibles,
+        key=f"dependencias_filtro_{key_base}",
+    )
+
+    fechas = st.multiselect(
+        "Fechas de inicio encontradas",
+        fechas_disponibles,
+        key=f"fechas_filtro_{key_base}",
+    )
+
+    st.caption("Condiciones adicionales")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        excluir_practica = st.checkbox(
+            "Excluir PRACTICA",
+            value=True,
+            key=f"excluir_practica_{key_base}",
         )
 
-        fechas = st.multiselect(
-            "Fechas de inicio encontradas",
-            fechas_disponibles,
-            key=f"fechas_filtro_{nonce_filtro}_{consolidado_path.name}",
+    with col2:
+        excluir_materias_historicas = st.checkbox(
+            "Excluir materias historicas",
+            value=True,
+            help="Replica las exclusiones del 3_Filtrar.py anterior.",
+            key=f"excluir_historicas_{key_base}",
         )
 
-        st.caption("Condiciones adicionales")
+    with col3:
+        capacidad_mayor_cero = st.checkbox(
+            "Capacidad != 0",
+            value=True,
+            key=f"capacidad_mayor_cero_{key_base}",
+        )
 
-        col1, col2, col3, col4 = st.columns(4)
+    with col4:
+        inscritos_mayor_cero = st.checkbox(
+            "Inscritos != 0",
+            value=True,
+            key=f"inscritos_mayor_cero_{key_base}",
+        )
 
-        with col1:
-            excluir_practica = st.checkbox(
-                "Excluir PRACTICA",
-                value=True,
-                key=f"excluir_practica_{nonce_filtro}_{consolidado_path.name}",
-            )
+    try:
+        df_base_para_filtros_avanzados, _, _ = aplicar_filtro_con_diagnostico(
+            df,
+            dependencias=dependencias,
+            fechas=fechas,
+            excluir_practica=excluir_practica,
+            excluir_materias_historicas=excluir_materias_historicas,
+            capacidad_mayor_cero=capacidad_mayor_cero,
+            inscritos_mayor_cero=inscritos_mayor_cero,
+        )
+    except Exception:
+        df_base_para_filtros_avanzados = df.copy()
 
-        with col2:
-            excluir_materias_historicas = st.checkbox(
-                "Excluir materias históricas",
-                value=True,
-                help="Replica las exclusiones del 3_Filtrar.py anterior.",
-                key=f"excluir_historicas_{nonce_filtro}_{consolidado_path.name}",
-            )
+    filtros_avanzados = mostrar_filtros_avanzados_opcionales(
+        df_base_para_filtros_avanzados,
+        key_base=key_base,
+    )
 
-        with col3:
-            capacidad_mayor_cero = st.checkbox(
-                "Capacidad != 0",
-                value=True,
-                key=f"capacidad_mayor_cero_{nonce_filtro}_{consolidado_path.name}",
-            )
-
-        with col4:
-            inscritos_mayor_cero = st.checkbox(
-                "Inscritos != 0",
-                value=True,
-                key=f"inscritos_mayor_cero_{nonce_filtro}_{consolidado_path.name}",
-            )
-
-        aplicar = st.form_submit_button("Aplicar filtro")
+    aplicar = st.button(
+        "Aplicar filtro",
+        type="primary",
+        key=f"btn_aplicar_filtro_{key_base}",
+    )
 
     if aplicar:
-        with st.spinner("Aplicando filtro..."):
+        with st.spinner("Aplicando filtro en memoria..."):
             df_filtrado, df_diagnostico, columnas_usadas = aplicar_filtro_con_diagnostico(
-                df=df,
+                df,
                 dependencias=dependencias,
                 fechas=fechas,
                 excluir_practica=excluir_practica,
@@ -1303,54 +1351,44 @@ def mostrar_panel_filtrado(consolidado_path: Path):
                 inscritos_mayor_cero=inscritos_mayor_cero,
             )
 
-        with st.expander("Ver diagnóstico del filtro", expanded=df_filtrado.empty):
-            st.dataframe(df_diagnostico, width="stretch")
-            st.json(columnas_usadas)
+            df_filtrado, resumen_filtros_avanzados = aplicar_filtros_avanzados(
+                df_filtrado,
+                filtros_avanzados,
+            )
 
-        st.success(f"Resultado filtrado: {len(df_filtrado):,} filas.")
+        filtros_aplicados = {
+            "dependencias": dependencias,
+            "fechas": fechas,
+            "excluir_practica": excluir_practica,
+            "excluir_materias_historicas": excluir_materias_historicas,
+            "capacidad_mayor_cero": capacidad_mayor_cero,
+            "inscritos_mayor_cero": inscritos_mayor_cero,
+            "columnas_usadas": columnas_usadas,
+            "filtros_avanzados": resumen_filtros_avanzados,
+            "periodos_base": periodos_base,
+        }
+
+        nombre_base = f"Filtrado_Dinamico_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        registrar_resultado_filtro_sesion(
+            df_filtrado=df_filtrado,
+            df_diagnostico=df_diagnostico,
+            columnas_usadas=columnas_usadas,
+            consolidado_path=consolidado_path,
+            filtros_aplicados=filtros_aplicados,
+            nombre_base=nombre_base,
+        )
 
         if df_filtrado.empty:
-            st.warning(
-                "El filtro no arrojó resultados. Revisa el diagnóstico anterior para identificar qué condición eliminó los registros."
-            )
-            return
-
-        st.dataframe(df_filtrado, width="stretch")
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nombre_base = f"Filtrado_Dinamico_{timestamp}"
-
-        carpeta_salida = consolidado_path.parent
-        salida_xlsx = carpeta_salida / f"{nombre_base}.xlsx"
-        salida_csv = carpeta_salida / f"{nombre_base}.csv"
-
-        df_filtrado.to_excel(salida_xlsx, index=False, engine="openpyxl")
-        df_filtrado.to_csv(salida_csv, index=False, encoding="utf-8-sig")
-        st.info(f"Archivos guardados en: {carpeta_salida}")
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            st.download_button(
-                "Descargar Excel",
-                data=convertir_excel_bytes(df_filtrado),
-                file_name=f"{nombre_base}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            st.warning("El filtro se aplico correctamente, pero no produjo registros.")
+        else:
+            st.success(
+                f"Filtro aplicado en memoria: {len(df_filtrado):,} registros encontrados. "
+                "Descarga Excel o CSV solo si lo necesitas."
             )
 
-        with c2:
-            st.download_button(
-                "Descargar CSV",
-                data=df_filtrado.to_csv(index=False).encode("utf-8-sig"),
-                file_name=f"{nombre_base}.csv",
-                mime="text/csv",
-            )
-
-    # Panel único de archivos generados.
-    # Se deja al final para que, si el usuario acaba de filtrar,
-    # también aparezcan los archivos Filtrado_Dinamico recién guardados.
+    mostrar_resultado_filtro_sesion()
     mostrar_archivos_generados(consolidado_path.parent, contexto="principal")
-
 
 def construir_resumen_ejecucion_actual(
     estado: str,
