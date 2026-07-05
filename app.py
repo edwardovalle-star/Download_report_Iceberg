@@ -172,6 +172,7 @@ def limpiar_busqueda(mensaje: str = "Búsqueda limpiada. Puedes iniciar una nuev
     )
 
     st.session_state["consolidado_path"] = None
+    st.session_state["consolidado_origen"] = ""
     st.session_state["ultimo_error"] = ""
     st.session_state["ultima_ejecucion_ok"] = False
     st.session_state["busqueda_nonce"] = st.session_state.get("busqueda_nonce", 0) + 1
@@ -227,6 +228,7 @@ def inicializar_estado():
         "iceberg_user": "",
         "iceberg_pass": "",
         "consolidado_path": None,
+        "consolidado_origen": "",
         "ultimo_error": "",
         "ultima_ejecucion_ok": False,
         "ultima_actividad_ts": timestamp_actual(),
@@ -294,9 +296,6 @@ def mostrar_sidebar():
                 limpiar_busqueda()
                 st.rerun()
 
-            if st.button("Cambiar credenciales", key="btn_cambiar_credenciales"):
-                cerrar_sesion_completa("Ingresa nuevamente tus credenciales.")
-                st.rerun()
 
             if st.button("Cerrar sesión", key="btn_cerrar_sesion"):
                 cerrar_sesion_completa("Sesión cerrada manualmente.")
@@ -1120,6 +1119,7 @@ def mostrar_descarga():
         st.session_state["ultimo_error"] = ""
         st.session_state["ultima_ejecucion_ok"] = False
         st.session_state["consolidado_path"] = None
+        st.session_state["consolidado_origen"] = ""
 
         env = construir_env(periodos)
 
@@ -1157,6 +1157,7 @@ def mostrar_descarga():
             return
 
         st.session_state["consolidado_path"] = str(consolidado)
+        st.session_state["consolidado_origen"] = "descarga"
         st.session_state["ultima_ejecucion_ok"] = True
 
         st.success("Descarga y consolidación finalizadas. Ya puedes filtrar.")
@@ -1315,20 +1316,38 @@ def mostrar_panel_filtrado(consolidado_path: Path):
 
 
 def mostrar_ultimo_consolidado():
+    """
+    Permite reutilizar el último consolidado existente,
+    pero solo despu?s de validar credenciales.
+    """
+    if not st.session_state.get("login_validado"):
+        return
+
     consolidado_existente = buscar_consolidado_mas_reciente()
 
-    if consolidado_existente:
-        with st.expander("Usar último consolidado existente"):
-            st.write(consolidado_existente)
-            if st.button("Cargar último consolidado para filtrar"):
-                st.session_state["consolidado_path"] = str(consolidado_existente)
-                st.rerun()
+    if not consolidado_existente:
+        return
 
+    with st.expander("Usar último consolidado existente", expanded=False):
+        st.caption(
+            "Esta opción permite filtrar el último consolidado generado "
+            "sin ejecutar una nueva descarga desde ICEBERG."
+        )
+
+        with st.expander("Ver ruta técnica del consolidado", expanded=False):
+            st.code(str(consolidado_existente), language="text")
+
+        if st.button("Cargar último consolidado para filtrar", key="btn_cargar_ultimo_consolidado"):
+            st.session_state["consolidado_path"] = str(consolidado_existente)
+            st.session_state["consolidado_origen"] = "existente"
+            st.session_state["ultima_ejecucion_ok"] = True
+            st.session_state["ultimo_error"] = ""
+            st.rerun()
 
 def main():
     st.set_page_config(
         page_title="ICEBERG - Reportes",
-        page_icon="📊",
+        page_icon="??",
         layout="wide",
     )
 
@@ -1349,21 +1368,28 @@ def main():
 
     if not st.session_state["login_validado"]:
         mostrar_login()
-        mostrar_ultimo_consolidado()
         return
 
-    mostrar_descarga()
-
     consolidado_session = st.session_state.get("consolidado_path")
+    consolidado_origen = st.session_state.get("consolidado_origen", "")
 
-    if consolidado_session:
+    if consolidado_session and consolidado_origen == "existente":
+        st.info(
+            "Est?s trabajando con el último consolidado existente. "
+            "No se ejecutar? una nueva descarga."
+        )
         mostrar_panel_filtrado(Path(consolidado_session))
+
+    elif consolidado_session:
+        mostrar_descarga()
+        mostrar_panel_filtrado(Path(consolidado_session))
+
     else:
+        mostrar_descarga()
         mostrar_ultimo_consolidado()
 
     if st.session_state["ultimo_error"]:
         st.error(st.session_state["ultimo_error"])
-
 
 if __name__ == "__main__":
     try:
