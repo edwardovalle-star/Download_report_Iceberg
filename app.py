@@ -68,7 +68,6 @@ try:
 except Exception:
     sync_playwright = None
 
-
 BASE_DIR = Path(__file__).resolve().parent
 ICEBERG_LOGIN_URL = "https://sig.cun.edu.co/icebergrs/"
 
