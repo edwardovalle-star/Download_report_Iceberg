@@ -11,7 +11,7 @@ import streamlit as st
 
 def asegurar_chromium_playwright() -> tuple[bool, str]:
     """
-    En Streamlit Cloud, pip instala la librería Playwright,
+    En Streamlit Cloud, pip instala la librería Playwright,1
     pero no siempre descarga el navegador Chromium.
 
     Esta función descarga Chromium una sola vez por entorno.
@@ -67,7 +67,6 @@ try:
     from playwright.sync_api import sync_playwright
 except Exception:
     sync_playwright = None
-
 
 BASE_DIR = Path(__file__).resolve().parent
 ICEBERG_LOGIN_URL = "https://sig.cun.edu.co/icebergrs/"
