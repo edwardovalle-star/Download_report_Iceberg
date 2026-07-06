@@ -214,3 +214,69 @@ def construir_reportes_a_descargar() -> list[dict]:
 REPORTES_A_DESCARGAR = construir_reportes_a_descargar()
 
 # ==== Fin seleccion dinamica de reportes desde la app ====
+
+# --- INICIO SELECCION DINAMICA REPORTES ICEBERG ---
+
+def _normalizar_lista_env(valor: str | None, default: str) -> list[str]:
+    """
+    Convierte una variable tipo:
+    ocupacion_docente,matriculados_grupo_periodo
+    en una lista limpia de claves.
+    """
+    if not valor:
+        valor = default
+
+    items = [
+        item.strip()
+        for item in str(valor).split(",")
+        if item.strip()
+    ]
+
+    return items or [default]
+
+
+def obtener_reportes_desde_env() -> list[str]:
+    """
+    Reportes que se deben descargar.
+    Por defecto se usa ocupacion_docente.
+    """
+    return _normalizar_lista_env(
+        os.getenv("ICEBERG_REPORTES"),
+        "ocupacion_docente",
+    )
+
+
+def construir_reportes_a_descargar() -> list[dict]:
+    """
+    Construye REPORTES_A_DESCARGAR desde REPORTES_DISPONIBLES
+    usando la variable ICEBERG_REPORTES.
+    """
+    claves = obtener_reportes_desde_env()
+    reportes = []
+
+    for clave in claves:
+        if clave not in REPORTES_DISPONIBLES:
+            print(f"Reporte no reconocido en ICEBERG_REPORTES: {clave}")
+            continue
+
+        reporte = {
+            **REPORTES_DISPONIBLES[clave],
+            "clave_reporte": clave,
+            "periodos": PERIODOS_BASE,
+        }
+
+        reportes.append(reporte)
+
+    if not reportes:
+        reportes.append({
+            **REPORTES_DISPONIBLES["ocupacion_docente"],
+            "clave_reporte": "ocupacion_docente",
+            "periodos": PERIODOS_BASE,
+        })
+
+    return reportes
+
+
+REPORTES_A_DESCARGAR = construir_reportes_a_descargar()
+
+# --- FIN SELECCION DINAMICA REPORTES ICEBERG ---

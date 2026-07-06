@@ -8,6 +8,7 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+import config
 from cloud_runtime import (
     ICEBERG_ENTORNO,
     MODO_LOCAL as MODO_LOCAL_RUNTIME,
@@ -424,10 +425,36 @@ def validar_credenciales_iceberg(usuario: str, password: str) -> tuple[bool, str
         return False, f"Error validando credenciales: {e}"
 
 
-def construir_env(periodos: list[str]) -> dict:
+def obtener_reportes_ui() -> tuple[list[str], dict[str, str]]:
+    """
+    Construye las opciones visibles de reportes/formato desde config.REPORTES_DISPONIBLES.
+    Retorna:
+    - lista de etiquetas para Streamlit
+    - mapa etiqueta -> clave_reporte
+    """
+    reportes = getattr(config, "REPORTES_DISPONIBLES", {})
+
+    opciones = []
+    mapa = {}
+
+    for clave, reporte in reportes.items():
+        nombre = reporte.get("nombre", clave)
+        etiqueta = f"{nombre} [{clave}]"
+        opciones.append(etiqueta)
+        mapa[etiqueta] = clave
+
+    if not opciones:
+        etiqueta = "Ocupacion_Docentes [ocupacion_docente]"
+        opciones = [etiqueta]
+        mapa[etiqueta] = "ocupacion_docente"
+
+    return opciones, mapa
+
+
+def construir_env(periodos: list[str], reportes: list[str] | None = None) -> dict:
     env = os.environ.copy()
 
-    # Evita errores de codificación con emojis o tildes en Windows.
+    # Evita errores de codificaci?n con emojis o tildes en Windows.
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
 
@@ -435,9 +462,9 @@ def construir_env(periodos: list[str]) -> dict:
     env["ICEBERG_USER"] = st.session_state["iceberg_user"]
     env["ICEBERG_PASS"] = st.session_state["iceberg_pass"]
     env["ICEBERG_PERIODOS"] = ",".join(periodos)
+    env["ICEBERG_REPORTES"] = ",".join(reportes or ["ocupacion_docente"])
 
     return env
-
 
 def resumir_error(logs: list[str]) -> str:
     texto = "\n".join(logs).lower()
@@ -1108,24 +1135,43 @@ def mostrar_login():
         st.error(mensaje)
 
 
+
 def mostrar_descarga():
     st.markdown(
         """
         <div class="ice-card ice-ok">
             <strong>Paso 2. Descargar y consolidar</strong><br>
             <span class="ice-muted">
-            Selecciona los periodos. La app mostrará avances y errores durante la ejecución.
+            Selecciona el formato/reporte y los periodos. La app mostrar? avances y errores durante la ejecuci?n.
             </span>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    opciones_reportes, mapa_reportes = obtener_reportes_ui()
+    nonce_busqueda = st.session_state.get("busqueda_nonce", 0)
+
+    etiqueta_default = None
+    for etiqueta, clave in mapa_reportes.items():
+        if clave == "ocupacion_docente":
+            etiqueta_default = etiqueta
+            break
+
+    indice_default = opciones_reportes.index(etiqueta_default) if etiqueta_default in opciones_reportes else 0
+
     with st.form("form_descarga"):
+        reporte_etiqueta = st.selectbox(
+            "Formato / reporte ICEBERG",
+            opciones_reportes,
+            index=indice_default,
+            key=f"reporte_iceberg_{nonce_busqueda}",
+        )
+
         periodos = st.multiselect(
-            "Periodos académicos",
+            "Periodos acad?micos",
             PERIODOS_UI,
-            key=f"periodos_academicos_{st.session_state.get('busqueda_nonce', 0)}",
+            key=f"periodos_academicos_{nonce_busqueda}",
         )
 
         ejecutar = st.form_submit_button("Descargar y consolidar")
@@ -1135,14 +1181,21 @@ def mostrar_descarga():
             st.error("Debes seleccionar al menos un periodo.")
             return
 
+        reporte_clave = mapa_reportes.get(reporte_etiqueta, "ocupacion_docente")
+        reporte_info = getattr(config, "REPORTES_DISPONIBLES", {}).get(reporte_clave, {})
+        reporte_nombre = reporte_info.get("nombre", reporte_clave)
+
         st.session_state["ultimo_error"] = ""
         st.session_state["ultima_ejecucion_ok"] = False
         st.session_state["consolidado_path"] = None
         st.session_state["consolidado_origen"] = ""
+        st.session_state["reporte_consolidado_activo"] = reporte_clave
+        st.session_state["nombre_reporte_consolidado_activo"] = reporte_nombre
 
-        env = construir_env(periodos)
+        env = construir_env(periodos, [reporte_clave])
 
-        st.info("Proceso iniciado. No cierres esta pestaña hasta finalizar.")
+        st.info("Proceso iniciado. No cierres esta pesta?a hasta finalizar.")
+        st.write("Formato/reporte enviado:", f"{reporte_nombre} [{reporte_clave}]")
         st.write("Periodos enviados:", periodos)
 
         ok_descarga, error_descarga = ejecutar_script(
@@ -1153,58 +1206,58 @@ def mostrar_descarga():
 
         if not ok_descarga:
             st.session_state["ultimo_error"] = error_descarga
-            st.error("No se continuará porque falló la descarga.")
+            st.error("No se continuar? porque fall? la descarga.")
             return
 
         ok_consolidacion, error_consolidacion = ejecutar_script(
             "2_Consolidar.py",
             env,
-            "Paso 2.2 - Consolidación",
+            "Paso 2.2 - Consolidaci?n",
         )
 
         if not ok_consolidacion:
             st.session_state["ultimo_error"] = error_consolidacion
-            st.error("No se continuará porque falló la consolidación.")
+            st.error("No se continuar? porque fall? la consolidaci?n.")
             return
 
         consolidado = buscar_consolidado_mas_reciente()
 
         if not consolidado:
-            mensaje = "La consolidación terminó, pero no se encontró Consolidado_Final*.xlsx."
+            mensaje = "La consolidaci?n termin?, pero no se encontr? Consolidado_Final*.xlsx."
             st.session_state["ultimo_error"] = mensaje
             st.error(mensaje)
             return
 
         st.session_state["consolidado_path"] = str(consolidado)
         st.session_state["consolidado_origen"] = "descarga"
+        st.session_state["periodos_consolidado_activo"] = periodos
+        st.session_state["fecha_consolidado_activo"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state["archivo_consolidado_activo"] = consolidado.name
+        st.session_state["carpeta_consolidado_activo"] = str(consolidado.parent)
         st.session_state["ultima_ejecucion_ok"] = True
+
+        mensaje_ok = (
+            "Descarga y consolidacion finalizada correctamente. "
+            f"Reporte: {reporte_nombre} [{reporte_clave}]."
+        )
+
         registrar_consolidado_sesion(
             consolidado_path=consolidado,
-            periodos=(
-                locals().get("periodos_seleccionados")
-                or locals().get("periodos")
-                or locals().get("periodos_academicos")
-                or []
-            ),
+            periodos=periodos,
             origen="descarga",
-            mensaje="Descarga y consolidacion finalizada correctamente.",
+            mensaje=mensaje_ok,
         )
+
         st.session_state["resumen_ejecucion_actual"] = construir_resumen_ejecucion_actual(
             estado="OK",
             origen="descarga",
-            periodos=(
-                locals().get("periodos_seleccionados")
-                or locals().get("periodos")
-                or locals().get("periodos_academicos")
-                or []
-            ),
+            periodos=periodos,
             consolidado_path=consolidado,
-            mensaje="Descarga y consolidacion finalizada correctamente.",
+            mensaje=mensaje_ok,
         )
 
-        st.success("Descarga y consolidación finalizadas. Ya puedes filtrar.")
+        st.success("Descarga y consolidaci?n finalizadas. Ya puedes filtrar.")
         st.rerun()
-
 
 def mostrar_panel_filtrado(consolidado_path: Path):
     st.divider()
