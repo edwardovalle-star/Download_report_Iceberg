@@ -117,6 +117,100 @@ def obtener_diagnostico_recursos(carpeta_descargas: Path | None = None) -> dict:
     return diagnostico
 
 
+
+def _carpetas_protegidas_sesion() -> set[Path]:
+    """
+    Identifica carpetas que no deben borrarse porque pueden estar activas
+    en la sesion actual.
+    """
+    protegidas = set()
+
+    posibles_rutas = [
+        st.session_state.get("carpeta_consolidado_activo"),
+    ]
+
+    consolidado_path = st.session_state.get("consolidado_path")
+
+    if consolidado_path:
+        try:
+            posibles_rutas.append(str(Path(consolidado_path).parent))
+        except Exception:
+            pass
+
+    for registro in st.session_state.get("consolidados_sesion", []) or []:
+        try:
+            ruta = registro.get("consolidado")
+            if ruta:
+                posibles_rutas.append(str(Path(ruta).parent))
+        except Exception:
+            pass
+
+    for ruta in posibles_rutas:
+        try:
+            if ruta:
+                protegidas.add(Path(ruta).resolve())
+        except Exception:
+            pass
+
+    return protegidas
+
+
+def limpiar_temporales_antiguos(
+    carpeta_base: Path | None = None,
+    conservar_ultimas: int = 5,
+) -> dict:
+    """
+    Elimina carpetas antiguas dentro de descargas_iceberg.
+    Conserva las mas recientes y las carpetas activas de la sesion.
+    """
+    carpeta = carpeta_base or CARPETA_DESCARGAS_DEFAULT
+
+    resultado = {
+        "carpetas_eliminadas": 0,
+        "archivos_eliminados": 0,
+        "bytes_liberados": 0,
+        "errores": [],
+    }
+
+    if not carpeta.exists():
+        return resultado
+
+    protegidas = _carpetas_protegidas_sesion()
+
+    carpetas = [
+        item for item in carpeta.iterdir()
+        if item.is_dir()
+    ]
+
+    carpetas = sorted(
+        carpetas,
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    )
+
+    candidatas = carpetas[max(conservar_ultimas, 0):]
+
+    for carpeta_item in candidatas:
+        try:
+            ruta_resuelta = carpeta_item.resolve()
+
+            if ruta_resuelta in protegidas:
+                continue
+
+            archivos, tamano = _tamano_carpeta(carpeta_item)
+
+            import shutil
+            shutil.rmtree(carpeta_item)
+
+            resultado["carpetas_eliminadas"] += 1
+            resultado["archivos_eliminados"] += archivos
+            resultado["bytes_liberados"] += tamano
+
+        except Exception as exc:
+            resultado["errores"].append(f"{carpeta_item}: {exc}")
+
+    return resultado
+
 def mostrar_diagnostico_tecnico_sidebar(carpeta_descargas: Path | None = None) -> None:
     with st.sidebar:
         with st.expander("Diagnostico tecnico", expanded=False):
@@ -167,6 +261,35 @@ def mostrar_diagnostico_tecnico_sidebar(carpeta_descargas: Path | None = None) -
                 st.warning("Advertencia: el proceso esta usando una parte importante de la memoria.")
             else:
                 st.success("Uso de memoria dentro de un rango razonable.")
+
+            st.caption("Limpieza segura")
+
+            conservar = st.number_input(
+                "Mantener ultimas carpetas",
+                min_value=1,
+                max_value=20,
+                value=5,
+                step=1,
+                key="num_conservar_carpetas_temporales",
+            )
+
+            if st.button("Limpiar temporales antiguos", key="btn_limpiar_temporales_antiguos"):
+                resultado = limpiar_temporales_antiguos(
+                    carpeta_base=carpeta_descargas or CARPETA_DESCARGAS_DEFAULT,
+                    conservar_ultimas=int(conservar),
+                )
+
+                st.success(
+                    "Limpieza finalizada: "
+                    f"{resultado['carpetas_eliminadas']} carpetas, "
+                    f"{resultado['archivos_eliminados']} archivos, "
+                    f"{_formato_mb(resultado['bytes_liberados'])} liberados."
+                )
+
+                if resultado["errores"]:
+                    with st.expander("Ver errores de limpieza", expanded=False):
+                        for error in resultado["errores"]:
+                            st.code(error, language="text")
 
             if st.button("Actualizar diagnostico", key="btn_actualizar_diagnostico_tecnico"):
                 st.rerun()
