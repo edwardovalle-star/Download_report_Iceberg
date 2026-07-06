@@ -8,6 +8,7 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+from resource_monitor import mostrar_diagnostico_tecnico_sidebar
 
 
 from session_workspace import (
@@ -1497,6 +1498,7 @@ def main():
         st.session_state["mensaje_sesion"] = ""
 
     mostrar_sidebar()
+    mostrar_diagnostico_tecnico_sidebar()
 
     if not st.session_state["login_validado"]:
         mostrar_login()
