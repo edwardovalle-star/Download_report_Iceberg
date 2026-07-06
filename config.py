@@ -151,3 +151,66 @@ REINTENTOS_PERIODO = 3
 
 # Pausa entre reintentos.
 RETRY_DELAY_SECONDS = 8
+
+# ==== Seleccion dinamica de reportes desde la app ====
+
+def _normalizar_lista_env(valor: str | None, default: str) -> list[str]:
+    """
+    Convierte una variable de entorno separada por comas en una lista limpia.
+    """
+    if not valor:
+        valor = default
+
+    items = [
+        item.strip()
+        for item in str(valor).split(",")
+        if item.strip()
+    ]
+
+    return items or [default]
+
+
+def obtener_reportes_desde_env() -> list[str]:
+    """
+    Lee las plantillas/reportes solicitados desde la app.
+    """
+    return _normalizar_lista_env(
+        os.getenv("ICEBERG_REPORTES"),
+        "ocupacion_docente",
+    )
+
+
+def construir_reportes_a_descargar() -> list[dict]:
+    """
+    Construye REPORTES_A_DESCARGAR con base en REPORTES_DISPONIBLES
+    y los reportes seleccionados desde la interfaz.
+    """
+    claves = obtener_reportes_desde_env()
+    reportes = []
+
+    for clave in claves:
+        if clave not in REPORTES_DISPONIBLES:
+            print(f"Reporte no reconocido en ICEBERG_REPORTES: {clave}")
+            continue
+
+        reporte = {
+            **REPORTES_DISPONIBLES[clave],
+            "clave_reporte": clave,
+            "periodos": PERIODOS_BASE,
+        }
+
+        reportes.append(reporte)
+
+    if not reportes:
+        reportes.append({
+            **REPORTES_DISPONIBLES["ocupacion_docente"],
+            "clave_reporte": "ocupacion_docente",
+            "periodos": PERIODOS_BASE,
+        })
+
+    return reportes
+
+
+REPORTES_A_DESCARGAR = construir_reportes_a_descargar()
+
+# ==== Fin seleccion dinamica de reportes desde la app ====

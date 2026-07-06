@@ -235,3 +235,11 @@ git push origin main
 git tag v11-streamlit-cloud
 git push origin v11-streamlit-cloud
 ```
+
+## Guia de usuario v12
+
+La version v12 incluye mejoras de sesion, reutilizacion de consolidados, filtrado en memoria y filtros avanzados dependientes estilo Excel.
+
+Consulta la guia completa en:
+
+- `docs/GUIA_USUARIO_V12.md`
