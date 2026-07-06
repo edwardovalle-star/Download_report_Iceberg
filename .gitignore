@@ -1,8 +1,25 @@
+﻿# Credenciales locales
 .env
 .streamlit/secrets.toml
+
+# Salidas generadas por ICEBERG
 descargas_iceberg/
-__pycache__/
-*.pyc
+
+# Entorno local
 .venv/
-.env.local
-*.log
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Backups temporales
+*_backup_*.py
+app_backup_*.py
+advanced_filters_backup_*.py
+filter_workspace_backup_*.py
+session_workspace_backup_*.py
+
+# Sistema
+.DS_Store
+Thumbs.db

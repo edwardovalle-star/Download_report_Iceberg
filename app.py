@@ -9,6 +9,25 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+
+from session_workspace import (
+    inicializar_workspace_sesion,
+    registrar_consolidado_sesion,
+    mostrar_consolidados_sesion,
+    mostrar_consolidado_activo_sesion,
+)
+
+from filter_workspace import (
+    limpiar_resultado_filtro_si_cambia_consolidado,
+    registrar_resultado_filtro_sesion,
+    mostrar_resultado_filtro_sesion,
+)
+
+from advanced_filters import (
+    aplicar_filtros_avanzados,
+    construir_resumen_filtros_avanzados,
+    mostrar_filtros_avanzados_opcionales,
+)
 def asegurar_chromium_playwright() -> tuple[bool, str]:
     """
     En Streamlit Cloud, pip instala la librería Playwright,
@@ -172,6 +191,13 @@ def limpiar_busqueda(mensaje: str = "Búsqueda limpiada. Puedes iniciar una nuev
     )
 
     st.session_state["consolidado_path"] = None
+    st.session_state["consolidado_origen"] = ""
+    st.session_state["consolidado_activo_id"] = ""
+    st.session_state["periodos_consolidado_activo"] = []
+    st.session_state["fecha_consolidado_activo"] = ""
+    st.session_state["archivo_consolidado_activo"] = ""
+    st.session_state["carpeta_consolidado_activo"] = ""
+    st.session_state["resumen_ejecucion_actual"] = None
     st.session_state["ultimo_error"] = ""
     st.session_state["ultima_ejecucion_ok"] = False
     st.session_state["busqueda_nonce"] = st.session_state.get("busqueda_nonce", 0) + 1
@@ -227,12 +253,14 @@ def inicializar_estado():
         "iceberg_user": "",
         "iceberg_pass": "",
         "consolidado_path": None,
+        "consolidado_origen": "",
         "ultimo_error": "",
         "ultima_ejecucion_ok": False,
         "ultima_actividad_ts": timestamp_actual(),
         "busqueda_nonce": 0,
         "filtro_nonce": 0,
         "mensaje_sesion": "",
+        "resumen_ejecucion_actual": None,
     }
 
     for clave, valor in defaults.items():
@@ -294,9 +322,6 @@ def mostrar_sidebar():
                 limpiar_busqueda()
                 st.rerun()
 
-            if st.button("Cambiar credenciales", key="btn_cambiar_credenciales"):
-                cerrar_sesion_completa("Ingresa nuevamente tus credenciales.")
-                st.rerun()
 
             if st.button("Cerrar sesión", key="btn_cerrar_sesion"):
                 cerrar_sesion_completa("Sesión cerrada manualmente.")
@@ -1120,6 +1145,7 @@ def mostrar_descarga():
         st.session_state["ultimo_error"] = ""
         st.session_state["ultima_ejecucion_ok"] = False
         st.session_state["consolidado_path"] = None
+        st.session_state["consolidado_origen"] = ""
 
         env = construir_env(periodos)
 
@@ -1157,7 +1183,31 @@ def mostrar_descarga():
             return
 
         st.session_state["consolidado_path"] = str(consolidado)
+        st.session_state["consolidado_origen"] = "descarga"
         st.session_state["ultima_ejecucion_ok"] = True
+        registrar_consolidado_sesion(
+            consolidado_path=consolidado,
+            periodos=(
+                locals().get("periodos_seleccionados")
+                or locals().get("periodos")
+                or locals().get("periodos_academicos")
+                or []
+            ),
+            origen="descarga",
+            mensaje="Descarga y consolidacion finalizada correctamente.",
+        )
+        st.session_state["resumen_ejecucion_actual"] = construir_resumen_ejecucion_actual(
+            estado="OK",
+            origen="descarga",
+            periodos=(
+                locals().get("periodos_seleccionados")
+                or locals().get("periodos")
+                or locals().get("periodos_academicos")
+                or []
+            ),
+            consolidado_path=consolidado,
+            mensaje="Descarga y consolidacion finalizada correctamente.",
+        )
 
         st.success("Descarga y consolidación finalizadas. Ya puedes filtrar.")
         st.rerun()
@@ -1177,6 +1227,8 @@ def mostrar_panel_filtrado(consolidado_path: Path):
         unsafe_allow_html=True,
     )
 
+    limpiar_resultado_filtro_si_cambia_consolidado(consolidado_path)
+
     st.caption(f"Consolidado detectado: `{consolidado_path}`")
 
     try:
@@ -1185,7 +1237,16 @@ def mostrar_panel_filtrado(consolidado_path: Path):
         st.error(f"No fue posible leer el consolidado: {e}")
         return
 
-    st.info(f"Consolidado cargado: {len(df):,} filas y {len(df.columns):,} columnas.")
+    periodos_base = st.session_state.get("periodos_consolidado_activo", [])
+    periodos_texto = ", ".join(periodos_base) if isinstance(periodos_base, list) else str(periodos_base)
+
+    if periodos_texto:
+        st.info(
+            f"Consolidado cargado: {len(df):,} filas y {len(df.columns):,} columnas. "
+            f"Periodos base: {periodos_texto}."
+        )
+    else:
+        st.info(f"Consolidado cargado: {len(df):,} filas y {len(df.columns):,} columnas.")
 
     try:
         columnas = obtener_columnas_filtro(df)
@@ -1204,59 +1265,84 @@ def mostrar_panel_filtrado(consolidado_path: Path):
     fechas_disponibles = preparar_fechas_para_ui(df[col_fecha])
 
     nonce_filtro = st.session_state.get("filtro_nonce", 0)
+    key_consolidado = str(abs(hash(str(consolidado_path))))[:10]
+    key_base = f"{nonce_filtro}_{consolidado_path.name}_{key_consolidado}"
 
-    with st.form("form_filtrado"):
-        dependencias = st.multiselect(
-            "Dependencias / carreras encontradas",
-            dependencias_disponibles,
-            key=f"dependencias_filtro_{nonce_filtro}_{consolidado_path.name}",
+    st.markdown("#### Filtros principales")
+
+    dependencias = st.multiselect(
+        "Dependencias / carreras encontradas",
+        dependencias_disponibles,
+        key=f"dependencias_filtro_{key_base}",
+    )
+
+    fechas = st.multiselect(
+        "Fechas de inicio encontradas",
+        fechas_disponibles,
+        key=f"fechas_filtro_{key_base}",
+    )
+
+    st.caption("Condiciones adicionales")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        excluir_practica = st.checkbox(
+            "Excluir PRACTICA",
+            value=True,
+            key=f"excluir_practica_{key_base}",
         )
 
-        fechas = st.multiselect(
-            "Fechas de inicio encontradas",
-            fechas_disponibles,
-            key=f"fechas_filtro_{nonce_filtro}_{consolidado_path.name}",
+    with col2:
+        excluir_materias_historicas = st.checkbox(
+            "Excluir materias historicas",
+            value=True,
+            help="Replica las exclusiones del 3_Filtrar.py anterior.",
+            key=f"excluir_historicas_{key_base}",
         )
 
-        st.caption("Condiciones adicionales")
+    with col3:
+        capacidad_mayor_cero = st.checkbox(
+            "Capacidad != 0",
+            value=True,
+            key=f"capacidad_mayor_cero_{key_base}",
+        )
 
-        col1, col2, col3, col4 = st.columns(4)
+    with col4:
+        inscritos_mayor_cero = st.checkbox(
+            "Inscritos != 0",
+            value=True,
+            key=f"inscritos_mayor_cero_{key_base}",
+        )
 
-        with col1:
-            excluir_practica = st.checkbox(
-                "Excluir PRACTICA",
-                value=True,
-                key=f"excluir_practica_{nonce_filtro}_{consolidado_path.name}",
-            )
+    try:
+        df_base_para_filtros_avanzados, _, _ = aplicar_filtro_con_diagnostico(
+            df,
+            dependencias=dependencias,
+            fechas=fechas,
+            excluir_practica=excluir_practica,
+            excluir_materias_historicas=excluir_materias_historicas,
+            capacidad_mayor_cero=capacidad_mayor_cero,
+            inscritos_mayor_cero=inscritos_mayor_cero,
+        )
+    except Exception:
+        df_base_para_filtros_avanzados = df.copy()
 
-        with col2:
-            excluir_materias_historicas = st.checkbox(
-                "Excluir materias históricas",
-                value=True,
-                help="Replica las exclusiones del 3_Filtrar.py anterior.",
-                key=f"excluir_historicas_{nonce_filtro}_{consolidado_path.name}",
-            )
+    filtros_avanzados = mostrar_filtros_avanzados_opcionales(
+        df_base_para_filtros_avanzados,
+        key_base=key_base,
+    )
 
-        with col3:
-            capacidad_mayor_cero = st.checkbox(
-                "Capacidad != 0",
-                value=True,
-                key=f"capacidad_mayor_cero_{nonce_filtro}_{consolidado_path.name}",
-            )
-
-        with col4:
-            inscritos_mayor_cero = st.checkbox(
-                "Inscritos != 0",
-                value=True,
-                key=f"inscritos_mayor_cero_{nonce_filtro}_{consolidado_path.name}",
-            )
-
-        aplicar = st.form_submit_button("Aplicar filtro")
+    aplicar = st.button(
+        "Aplicar filtro",
+        type="primary",
+        key=f"btn_aplicar_filtro_{key_base}",
+    )
 
     if aplicar:
-        with st.spinner("Aplicando filtro..."):
+        with st.spinner("Aplicando filtro en memoria..."):
             df_filtrado, df_diagnostico, columnas_usadas = aplicar_filtro_con_diagnostico(
-                df=df,
+                df,
                 dependencias=dependencias,
                 fechas=fechas,
                 excluir_practica=excluir_practica,
@@ -1265,80 +1351,145 @@ def mostrar_panel_filtrado(consolidado_path: Path):
                 inscritos_mayor_cero=inscritos_mayor_cero,
             )
 
-        with st.expander("Ver diagnóstico del filtro", expanded=df_filtrado.empty):
-            st.dataframe(df_diagnostico, width="stretch")
-            st.json(columnas_usadas)
+            df_filtrado, resumen_filtros_avanzados = aplicar_filtros_avanzados(
+                df_filtrado,
+                filtros_avanzados,
+            )
 
-        st.success(f"Resultado filtrado: {len(df_filtrado):,} filas.")
+        filtros_aplicados = {
+            "dependencias": dependencias,
+            "fechas": fechas,
+            "excluir_practica": excluir_practica,
+            "excluir_materias_historicas": excluir_materias_historicas,
+            "capacidad_mayor_cero": capacidad_mayor_cero,
+            "inscritos_mayor_cero": inscritos_mayor_cero,
+            "columnas_usadas": columnas_usadas,
+            "filtros_avanzados": resumen_filtros_avanzados,
+            "periodos_base": periodos_base,
+        }
+
+        nombre_base = f"Filtrado_Dinamico_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        registrar_resultado_filtro_sesion(
+            df_filtrado=df_filtrado,
+            df_diagnostico=df_diagnostico,
+            columnas_usadas=columnas_usadas,
+            consolidado_path=consolidado_path,
+            filtros_aplicados=filtros_aplicados,
+            nombre_base=nombre_base,
+        )
 
         if df_filtrado.empty:
-            st.warning(
-                "El filtro no arrojó resultados. Revisa el diagnóstico anterior para identificar qué condición eliminó los registros."
-            )
-            return
-
-        st.dataframe(df_filtrado, width="stretch")
-
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        nombre_base = f"Filtrado_Dinamico_{timestamp}"
-
-        carpeta_salida = consolidado_path.parent
-        salida_xlsx = carpeta_salida / f"{nombre_base}.xlsx"
-        salida_csv = carpeta_salida / f"{nombre_base}.csv"
-
-        df_filtrado.to_excel(salida_xlsx, index=False, engine="openpyxl")
-        df_filtrado.to_csv(salida_csv, index=False, encoding="utf-8-sig")
-        st.info(f"Archivos guardados en: {carpeta_salida}")
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            st.download_button(
-                "Descargar Excel",
-                data=convertir_excel_bytes(df_filtrado),
-                file_name=f"{nombre_base}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            st.warning("El filtro se aplico correctamente, pero no produjo registros.")
+        else:
+            st.success(
+                f"Filtro aplicado en memoria: {len(df_filtrado):,} registros encontrados. "
+                "Descarga Excel o CSV solo si lo necesitas."
             )
 
-        with c2:
-            st.download_button(
-                "Descargar CSV",
-                data=df_filtrado.to_csv(index=False).encode("utf-8-sig"),
-                file_name=f"{nombre_base}.csv",
-                mime="text/csv",
-            )
-
-    # Panel único de archivos generados.
-    # Se deja al final para que, si el usuario acaba de filtrar,
-    # también aparezcan los archivos Filtrado_Dinamico recién guardados.
+    mostrar_resultado_filtro_sesion()
     mostrar_archivos_generados(consolidado_path.parent, contexto="principal")
+
+def construir_resumen_ejecucion_actual(
+    estado: str,
+    origen: str,
+    periodos=None,
+    consolidado_path=None,
+    mensaje: str = "",
+) -> dict:
+    """
+    Construye un resumen visible solo en la sesion actual del usuario.
+    No escribe archivos globales y no comparte informacion con otros usuarios.
+    """
+    if periodos is None:
+        periodos = []
+
+    if isinstance(periodos, str):
+        periodos = [periodos]
+
+    consolidado_str = ""
+    carpeta_str = ""
+
+    if consolidado_path:
+        consolidado = Path(consolidado_path)
+        consolidado_str = str(consolidado)
+        carpeta_str = str(consolidado.parent)
+
+    return {
+        "fecha": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "usuario": st.session_state.get("iceberg_user", ""),
+        "entorno": etiqueta_modo_ejecucion(),
+        "estado": estado,
+        "origen": origen,
+        "periodos": list(periodos) if isinstance(periodos, (list, tuple, set)) else [str(periodos)],
+        "consolidado": consolidado_str,
+        "carpeta": carpeta_str,
+        "mensaje": mensaje,
+    }
+
+
+def mostrar_resumen_ejecucion_actual() -> None:
+    """
+    Muestra solo el resumen de la ejecucion actual de la sesion.
+    """
+    resumen = st.session_state.get("resumen_ejecucion_actual")
+
+    if not resumen:
+        return
+
+    with st.expander("Resumen de ejecucion actual", expanded=False):
+        st.caption(
+            "Este resumen pertenece solo a esta sesion. "
+            "No es una bitacora global ni muestra ejecuciones de otros usuarios."
+        )
+
+        periodos = resumen.get("periodos", [])
+        periodos_texto = ", ".join(periodos) if isinstance(periodos, list) else str(periodos)
+
+        datos = {
+            "Fecha": resumen.get("fecha", ""),
+            "Estado": resumen.get("estado", ""),
+            "Origen": resumen.get("origen", ""),
+            "Usuario": resumen.get("usuario", ""),
+            "Entorno": resumen.get("entorno", ""),
+            "Periodos": periodos_texto,
+            "Mensaje": resumen.get("mensaje", ""),
+        }
+
+        st.dataframe(
+            pd.DataFrame([datos]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        consolidado = resumen.get("consolidado", "")
+        if consolidado:
+            with st.expander("Ver ruta tecnica de esta ejecucion", expanded=False):
+                st.code(consolidado, language="text")
 
 
 def mostrar_ultimo_consolidado():
-    consolidado_existente = buscar_consolidado_mas_reciente()
-
-    if consolidado_existente:
-        with st.expander("Usar último consolidado existente"):
-            st.write(consolidado_existente)
-            if st.button("Cargar último consolidado para filtrar"):
-                st.session_state["consolidado_path"] = str(consolidado_existente)
-                st.rerun()
-
+    """
+    Desactivado para uso compartido.
+    Evita que un usuario cargue consolidados globales generados por otra sesion.
+    """
+    return
 
 def main():
     st.set_page_config(
         page_title="ICEBERG - Reportes",
-        page_icon="📊",
+        page_icon="\U0001f4ca",
         layout="wide",
     )
 
     inicializar_estado()
+    inicializar_workspace_sesion()
     verificar_timeout_inactividad()
     registrar_actividad()
     aplicar_estilos()
 
     st.title("ICEBERG - Reportes")
-    st.caption("Descarga, consolidación, filtrado y acceso rápido a archivos generados.")
+    st.caption("Descarga, consolidaci\u00f3n, filtrado y acceso r\u00e1pido a archivos generados.")
     st.caption(f"Modo actual: {etiqueta_modo_ejecucion()}")
 
     if st.session_state.get("mensaje_sesion"):
@@ -1349,21 +1500,20 @@ def main():
 
     if not st.session_state["login_validado"]:
         mostrar_login()
-        mostrar_ultimo_consolidado()
         return
-
-    mostrar_descarga()
 
     consolidado_session = st.session_state.get("consolidado_path")
 
     if consolidado_session:
+        mostrar_consolidado_activo_sesion()
         mostrar_panel_filtrado(Path(consolidado_session))
+        mostrar_consolidados_sesion()
     else:
-        mostrar_ultimo_consolidado()
+        mostrar_descarga()
+        mostrar_consolidados_sesion()
 
     if st.session_state["ultimo_error"]:
         st.error(st.session_state["ultimo_error"])
-
 
 if __name__ == "__main__":
     try:
