@@ -8,6 +8,11 @@ from datetime import datetime
 
 import pandas as pd
 import streamlit as st
+from cloud_runtime import (
+    ICEBERG_ENTORNO,
+    MODO_LOCAL as MODO_LOCAL_RUNTIME,
+    etiqueta_modo_ejecucion as etiqueta_modo_ejecucion_runtime,
+)
 from resource_monitor import mostrar_diagnostico_tecnico_sidebar
 
 
@@ -85,7 +90,7 @@ except Exception as e:
 
 try:
     from playwright.sync_api import sync_playwright
-except Exception:
+except Exception:  # type: ignore
     sync_playwright = None
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -94,7 +99,7 @@ ICEBERG_LOGIN_URL = "https://sig.cun.edu.co/icebergrs/"
 # Modo de ejecución:
 # - true  : ejecución local en Windows. Habilita abrir carpeta/archivo.
 # - false : ejecución web/servidor/Codespaces/Docker. Solo muestra descargas.
-MODO_LOCAL = os.getenv("ICEBERG_MODO_LOCAL", "false").strip().lower() in {"1", "true", "yes", "si", "sí"}
+MODO_LOCAL = MODO_LOCAL_RUNTIME
 
 # Etiqueta visual para que el usuario identifique dónde está corriendo.
 ENTORNO_APP = os.getenv("ICEBERG_ENTORNO", "streamlit").strip().lower()
@@ -131,20 +136,7 @@ MATERIAS_EXCLUIDAS_HISTORICAS = [
 
 
 def etiqueta_modo_ejecucion() -> str:
-    if MODO_LOCAL:
-        return "Local Windows"
-
-    if ENTORNO_APP in {"codespaces", "github_codespaces"}:
-        return "GitHub Codespaces"
-
-    if ENTORNO_APP in {"docker", "contenedor", "container"}:
-        return "Docker / Servidor"
-
-    if ENTORNO_APP in {"streamlit", "streamlit_cloud", "cloud"}:
-        return "Streamlit Cloud"
-
-    return "Web / Servidor"
-
+    return etiqueta_modo_ejecucion_runtime()
 
 def timestamp_actual() -> float:
     return datetime.now().timestamp()
