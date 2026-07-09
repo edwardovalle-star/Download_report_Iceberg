@@ -246,7 +246,14 @@ def mostrar_resultado_filtro_sesion() -> None:
             )
             df_preview = df_filtrado.head(MAX_FILAS_PREVISUALIZACION)
         else:
-            st.caption("Vista previa del resultado filtrado.")
+            st.markdown(
+                '<div class="ice-table-title">Vista previa del resultado filtrado</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div class="ice-section-note">Revisa los datos antes de descargar o guardar el resultado.</div>',
+                unsafe_allow_html=True,
+            )
             df_preview = df_filtrado
 
         st.dataframe(
