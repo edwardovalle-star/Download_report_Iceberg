@@ -781,6 +781,35 @@ def aplicar_estilos():
 
         /* --- FIN TABLA HTML AGGRID ICEBERG --- */
 
+
+        /* --- INICIO OCULTAR ICONOS STREAMLIT DATAFRAME --- */
+
+        /* Oculta barra flotante de st.dataframe: buscar, descargar, fullscreen, columnas */
+        div[data-testid="stElementToolbar"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        /* Oculta botones internos de la barra de herramientas */
+        div[data-testid="stElementToolbarButton"],
+        div[data-testid="stElementToolbarButtonContainer"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* Oculta algunos iconos decorativos en encabezados de Glide/DataFrame */
+        div[data-testid="stDataFrame"] svg[aria-label="Search"],
+        div[data-testid="stDataFrame"] button[aria-label="Search"],
+        div[data-testid="stDataFrame"] button[aria-label="Download as CSV"],
+        div[data-testid="stDataFrame"] button[aria-label="Fullscreen"],
+        div[data-testid="stDataFrame"] button[aria-label="Show/hide columns"] {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        /* --- FIN OCULTAR ICONOS STREAMLIT DATAFRAME --- */
+
         </style>
         """,
         unsafe_allow_html=True,
