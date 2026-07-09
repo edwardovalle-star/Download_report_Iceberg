@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from uuid import uuid4
+from html import escape
+
+import uuid
 
 import pandas as pd
 import streamlit as st
@@ -21,429 +23,480 @@ OPERADORES_AVANZADOS = [
 
 
 def _texto_serie(serie: pd.Series) -> pd.Series:
-    return serie.where(~serie.isna(), "").astype(str).str.strip()
+    return serie.astype(str).str.strip()
 
 
 def _numero_serie(serie: pd.Series) -> pd.Series:
-    texto = _texto_serie(serie).str.replace(",", ".", regex=False)
-    return pd.to_numeric(texto, errors="coerce")
+    return pd.to_numeric(serie, errors="coerce")
 
 
-def _valor_numero(valor: str):
-    valor = str(valor).strip().replace(",", ".")
-    if not valor:
+def _valor_numero(valor: object) -> float | None:
+    try:
+        if valor is None or str(valor).strip() == "":
+            return None
+
+        return float(str(valor).replace(",", ".").strip())
+    except Exception:
         return None
-
-    convertido = pd.to_numeric(pd.Series([valor]), errors="coerce").iloc[0]
-    if pd.isna(convertido):
-        return None
-
-    return convertido
 
 
 def _tipo_estimado(serie: pd.Series) -> str:
-    if pd.api.types.is_numeric_dtype(serie):
+    muestra = serie.dropna()
+
+    if muestra.empty:
+        return "Vacio"
+
+    numerica = pd.to_numeric(muestra, errors="coerce")
+
+    if numerica.notna().mean() >= 0.80:
         return "Numero"
 
-    if pd.api.types.is_datetime64_any_dtype(serie):
+    fechas = pd.to_datetime(muestra, errors="coerce", dayfirst=True)
+
+    if fechas.notna().mean() >= 0.80:
         return "Fecha"
-
-    muestra_numerica = pd.to_numeric(
-        _texto_serie(serie).str.replace(",", ".", regex=False),
-        errors="coerce",
-    )
-
-    if muestra_numerica.notna().mean() >= 0.8:
-        return "Numero"
 
     return "Texto"
 
 
-def _valores_unicos_columna(df: pd.DataFrame, campo: str) -> list[str]:
+def _valores_unicos_columna(df: pd.DataFrame, campo: str, limite: int = 500) -> list[str]:
     if campo not in df.columns:
         return []
 
-    valores = (
-        _texto_serie(df[campo])
-        .replace({"nan": ""})
-        .dropna()
-        .unique()
-        .tolist()
-    )
+    serie = df[campo].dropna().astype(str).str.strip()
+    valores = sorted({valor for valor in serie.tolist() if valor and valor.lower() != "nan"})
 
-    valores = [v for v in valores if str(v).strip()]
-
-    try:
-        return sorted(valores, key=lambda x: str(x).casefold())
-    except Exception:
-        return valores
+    return valores[:limite]
 
 
 def _estado_filtros_key(key_base: str) -> str:
-    return f"filtros_avanzados_config_{key_base}"
+    return f"filtros_avanzados_{key_base}"
 
 
 def _inicializar_filtros_avanzados(key_base: str) -> None:
-    estado_key = _estado_filtros_key(key_base)
+    key = _estado_filtros_key(key_base)
 
-    if estado_key not in st.session_state:
-        st.session_state[estado_key] = []
+    if key not in st.session_state:
+        st.session_state[key] = []
 
 
 def _agregar_filtro_avanzado(key_base: str, max_filtros: int) -> None:
-    estado_key = _estado_filtros_key(key_base)
+    key = _estado_filtros_key(key_base)
     _inicializar_filtros_avanzados(key_base)
 
-    filtros = st.session_state[estado_key]
+    filtros = st.session_state.get(key, [])
 
     if len(filtros) >= max_filtros:
-        st.warning("Ya alcanzaste la cantidad maxima de filtros avanzados para este consolidado.")
         return
 
-    filtros.append({"id": uuid4().hex[:10]})
-    st.session_state[estado_key] = filtros
+    filtros.append(
+        {
+            "id": uuid.uuid4().hex[:10],
+            "campo": "",
+            "operador": "Incluir seleccionados",
+            "valores": [],
+            "valor": "",
+        }
+    )
+
+    st.session_state[key] = filtros
 
 
 def _quitar_filtro_avanzado(key_base: str, filtro_id: str) -> None:
-    estado_key = _estado_filtros_key(key_base)
-    filtros = st.session_state.get(estado_key, [])
+    key = _estado_filtros_key(key_base)
+    filtros = st.session_state.get(key, [])
 
-    st.session_state[estado_key] = [
+    st.session_state[key] = [
         filtro for filtro in filtros
-        if filtro.get("id") != filtro_id
+        if str(filtro.get("id")) != str(filtro_id)
     ]
 
 
-def mostrar_filtros_avanzados_opcionales(
-    df: pd.DataFrame,
-    key_base: str,
-) -> list[dict]:
+def _dataframe_campos_disponibles(df: pd.DataFrame) -> pd.DataFrame:
+    filas = []
+
+    for indice, columna in enumerate(df.columns, start=1):
+        serie = df[columna].dropna().astype(str).str.strip()
+
+        valores = [
+            valor
+            for valor in serie.unique().tolist()
+            if valor and valor.lower() != "nan"
+        ]
+
+        ejemplos = ", ".join(valores[:3])
+
+        if len(ejemplos) > 180:
+            ejemplos = ejemplos[:177] + "..."
+
+        filas.append(
+            {
+                "#": indice,
+                "Campo": str(columna),
+                "Ejemplos de registros": ejemplos,
+                "Valores unicos": len(set(valores)),
+            }
+        )
+
+    return pd.DataFrame(
+        filas,
+        columns=["#", "Campo", "Ejemplos de registros", "Valores unicos"],
+    )
+
+
+def _html_campos_disponibles(df: pd.DataFrame) -> str:
+    tabla = _dataframe_campos_disponibles(df)
+
+    filas_html = []
+
+    for _, fila in tabla.iterrows():
+        numero = escape(str(fila.get("#", "")))
+        campo = escape(str(fila.get("Campo", "")))
+        ejemplos = escape(str(fila.get("Ejemplos de registros", "")))
+        valores = escape(str(fila.get("Valores unicos", "")))
+
+        filas_html.append(
+            f"""
+            <tr>
+                <td class="ice-ag-index" data-label="#">{numero}</td>
+                <td class="ice-ag-field" data-label="Campo">{campo}</td>
+                <td class="ice-ag-example" data-label="Ejemplos de registros" title="{ejemplos}">{ejemplos}</td>
+                <td class="ice-ag-count" data-label="Valores unicos">{valores}</td>
+            </tr>
+            """
+        )
+
+    total_campos = len(tabla)
+
+    return f"""
+    <div class="ice-ag-panel">
+        <div class="ice-ag-topbar">
+            <div>
+                <div class="ice-ag-title">Matriz de campos disponibles</div>
+                <div>Campos reales detectados desde el consolidado activo.</div>
+            </div>
+            <span class="ice-ag-pill">{total_campos} campos</span>
+        </div>
+
+        <div class="ice-ag-grid-wrap">
+            <table class="ice-ag-table" aria-label="Campos disponibles">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Campo</th>
+                        <th>Ejemplos de registros</th>
+                        <th>Valores unicos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {''.join(filas_html)}
+                </tbody>
+            </table>
+        </div>
+    </div>
     """
-    Muestra filtros avanzados estilo Excel con valores dependientes.
-    Preserva campo, condicion y valores cuando se agregan nuevos filtros.
+
+def mostrar_filtros_avanzados_opcionales(df: pd.DataFrame, key_base: str) -> list[dict]:
     """
-    max_filtros = len(df.columns)
+    Muestra filtros avanzados opcionales.
+    Los valores disponibles se actualizan segun los filtros principales
+    y los filtros avanzados anteriores.
+    """
     _inicializar_filtros_avanzados(key_base)
 
     estado_key = _estado_filtros_key(key_base)
-    filtros_config = st.session_state[estado_key]
-    filtros_resultado = []
+    filtros = st.session_state.get(estado_key, [])
 
-    with st.expander("Filtros avanzados opcionales", expanded=False):
-        st.caption(
-            "Agrega filtros adicionales usando los campos reales del consolidado. "
-            "Los valores disponibles se actualizan segun los filtros principales "
-            "y los filtros avanzados anteriores."
+    columnas = [str(col) for col in df.columns]
+    max_filtros = len(columnas)
+
+    st.markdown("#### Filtros avanzados opcionales")
+    st.caption(
+        "Agrega filtros adicionales usando los campos reales del consolidado. "
+        "Los valores disponibles se actualizan segun los filtros principales y los filtros avanzados anteriores."
+    )
+
+    with st.expander("Ver campos disponibles", expanded=False):
+        st.markdown(
+            _html_campos_disponibles(df),
+            unsafe_allow_html=True,
         )
 
-        col_add, col_info = st.columns([1, 4])
+    col_btn, col_info = st.columns([1.1, 3.2])
 
-        with col_add:
-            if st.button(
-                "Agregar filtro",
-                key=f"btn_agregar_filtro_avanzado_{key_base}",
-                disabled=len(filtros_config) >= max_filtros,
-            ):
-                _agregar_filtro_avanzado(key_base, max_filtros)
-                st.rerun()
+    with col_btn:
+        if st.button(
+            "Agregar filtro",
+            key=f"btn_agregar_filtro_avanzado_{key_base}",
+        ):
+            _agregar_filtro_avanzado(key_base, max_filtros=max_filtros)
+            st.rerun()
 
-        with col_info:
-            st.caption(
-                f"Filtros avanzados activos: {len(filtros_config)} de {max_filtros} posibles."
-            )
+    with col_info:
+        st.caption(f"Filtros avanzados activos: {len(filtros)} de {max_filtros} posibles.")
 
-        with st.expander("Ver campos disponibles", expanded=False):
-            df_campos = pd.DataFrame({
-                "#": range(1, len(df.columns) + 1),
-                "Campo": list(df.columns),
-            })
+    if not filtros:
+        return []
 
-            st.dataframe(
-                df_campos,
-                use_container_width=True,
-                hide_index=True,
-            )
+    st.markdown(
+        """
+        <div class="ice-filter-grid-header">
+            <div>Campo</div>
+            <div>Condicion</div>
+            <div>Valores / criterio</div>
+            <div>Accion</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-        if df.empty:
-            st.warning(
-                "Los filtros principales no tienen registros disponibles. "
-                "Ajusta los filtros principales para habilitar valores avanzados."
-            )
+    filtros_actualizados = []
+    filtros_previos_para_valores = []
 
-        if not filtros_config:
-            st.info("No hay filtros avanzados agregados. Usa el boton Agregar filtro si necesitas criterios adicionales.")
-            return []
+    for indice, filtro in enumerate(filtros):
+        if indice > 0:
+            st.markdown('<div class="ice-filter-row-separator"></div>', unsafe_allow_html=True)
 
-        columnas = list(df.columns)
+        st.markdown(
+            f'<div class="ice-filter-row-label">Filtro avanzado {indice + 1}</div>',
+            unsafe_allow_html=True,
+        )
 
-        df_contexto = df.copy()
-        filtros_actualizados = []
+        filtro_id = str(filtro.get("id") or uuid.uuid4().hex[:10])
+        filtro["id"] = filtro_id
 
-        for idx, filtro in enumerate(list(filtros_config), start=1):
-            filtro_id = filtro.get("id", str(idx))
+        df_para_valores = df.copy()
 
-            campo_guardado = filtro.get("campo", columnas[0] if columnas else "")
-            if campo_guardado not in columnas and columnas:
-                campo_guardado = columnas[0]
-
-            operador_guardado = filtro.get("operador", "Incluir seleccionados")
-            if operador_guardado not in OPERADORES_AVANZADOS:
-                operador_guardado = "Incluir seleccionados"
-
-            label_vis = "visible" if idx == 1 else "collapsed"
-
-            col1, col2, col3, col4 = st.columns([2.1, 1.5, 3.4, 0.8])
-
-            with col1:
-                campo = st.selectbox(
-                    "Campo",
-                    columnas,
-                    index=columnas.index(campo_guardado) if campo_guardado in columnas else 0,
-                    key=f"adv_campo_{filtro_id}_{key_base}",
-                    label_visibility=label_vis,
-                )
-
-            with col2:
-                operador = st.selectbox(
-                    "Condicion",
-                    OPERADORES_AVANZADOS,
-                    index=OPERADORES_AVANZADOS.index(operador_guardado),
-                    key=f"adv_operador_{filtro_id}_{key_base}",
-                    label_visibility=label_vis,
-                )
-
-            valores = []
-            valor_texto = ""
-
-            with col3:
-                if operador in ["Incluir seleccionados", "Excluir seleccionados"]:
-                    opciones = _valores_unicos_columna(df_contexto, campo)
-
-                    key_valores = f"adv_valores_{filtro_id}_{key_base}"
-                    valores_guardados = filtro.get("valores", [])
-
-                    if key_valores not in st.session_state:
-                        st.session_state[key_valores] = [
-                            valor for valor in valores_guardados
-                            if valor in opciones
-                        ]
-                    else:
-                        seleccion_actual = st.session_state.get(key_valores, [])
-                        if isinstance(seleccion_actual, list):
-                            st.session_state[key_valores] = [
-                                valor for valor in seleccion_actual
-                                if valor in opciones
-                            ]
-
-                    valores = st.multiselect(
-                        "Valores disponibles",
-                        opciones,
-                        key=key_valores,
-                        placeholder="Selecciona uno o varios valores",
-                        label_visibility=label_vis,
-                    )
-
-                    if not opciones:
-                        st.caption("No hay valores disponibles con los filtros anteriores.")
-
-                elif operador in ["Contiene", "No contiene"]:
-                    key_texto = f"adv_texto_{filtro_id}_{key_base}"
-
-                    if key_texto not in st.session_state:
-                        st.session_state[key_texto] = filtro.get("valor", "")
-
-                    valor_texto = st.text_input(
-                        "Texto a buscar",
-                        key=key_texto,
-                        placeholder="Ej: PROGRAMACION",
-                        label_visibility=label_vis,
-                    )
-
-                elif operador in ["Mayor que", "Menor que", "Mayor o igual", "Menor o igual"]:
-                    key_numero = f"adv_numero_{filtro_id}_{key_base}"
-
-                    if key_numero not in st.session_state:
-                        st.session_state[key_numero] = filtro.get("valor", "")
-
-                    valor_texto = st.text_input(
-                        "Valor numerico",
-                        key=key_numero,
-                        placeholder="Ej: 10",
-                        label_visibility=label_vis,
-                    )
-
-                else:
-                    if idx == 1:
-                        st.caption("Esta condicion no requiere valor.")
-
-            with col4:
-                if idx == 1:
-                    st.write("")
-                if st.button(
-                    "Quitar",
-                    key=f"btn_quitar_filtro_{filtro_id}_{key_base}",
-                ):
-                    _quitar_filtro_avanzado(key_base, filtro_id)
-                    st.rerun()
-
-            filtro_actual = {
-                "id": filtro_id,
-                "campo": campo,
-                "operador": operador,
-                "valores": valores,
-                "valor": valor_texto,
-            }
-
-            filtros_resultado.append(filtro_actual)
-            filtros_actualizados.append(filtro_actual)
-
+        if filtros_previos_para_valores:
             try:
-                df_contexto, _ = aplicar_filtros_avanzados(
-                    df_contexto,
-                    [filtro_actual],
+                df_para_valores, _ = aplicar_filtros_avanzados(
+                    df_para_valores,
+                    filtros_previos_para_valores,
                 )
             except Exception:
-                pass
+                df_para_valores = df.copy()
 
-        st.session_state[estado_key] = filtros_actualizados
+        campo_actual = str(filtro.get("campo") or "")
+        if campo_actual not in columnas:
+            campo_actual = columnas[0] if columnas else ""
 
-    return filtros_resultado
+        operador_actual = str(filtro.get("operador") or "Incluir seleccionados")
+        if operador_actual not in OPERADORES_AVANZADOS:
+            operador_actual = "Incluir seleccionados"
 
-def _resumen_criterio_usuario(filtro: dict) -> dict | None:
-    campo = filtro.get("campo", "")
+        label_visibility = "visible" if indice == 0 else "collapsed"
+
+        col_campo, col_operador, col_valores, col_quitar = st.columns([1.55, 1.25, 2.6, 0.70])
+
+        with col_campo:
+            campo = st.selectbox(
+                "Campo",
+                columnas,
+                index=columnas.index(campo_actual) if campo_actual in columnas else 0,
+                key=f"adv_campo_{filtro_id}_{key_base}",
+                label_visibility=label_visibility,
+            )
+
+        with col_operador:
+            operador = st.selectbox(
+                "Condicion",
+                OPERADORES_AVANZADOS,
+                index=OPERADORES_AVANZADOS.index(operador_actual),
+                key=f"adv_operador_{filtro_id}_{key_base}",
+                label_visibility=label_visibility,
+            )
+
+        valores = []
+        valor_texto = str(filtro.get("valor") or "")
+
+        with col_valores:
+            if operador in {"Incluir seleccionados", "Excluir seleccionados"}:
+                valores_disponibles = _valores_unicos_columna(df_para_valores, campo)
+                valores_default = [
+                    str(valor)
+                    for valor in filtro.get("valores", [])
+                    if str(valor) in valores_disponibles
+                ]
+
+                valores = st.multiselect(
+                    "Valores disponibles",
+                    valores_disponibles,
+                    default=valores_default,
+                    key=f"adv_valores_{filtro_id}_{key_base}",
+                    label_visibility=label_visibility,
+                )
+
+                valor_texto = ""
+            elif operador in {"Contiene", "No contiene"}:
+                valor_texto = st.text_input(
+                    "Texto a buscar",
+                    value=valor_texto,
+                    key=f"adv_valor_texto_{filtro_id}_{key_base}",
+                    label_visibility=label_visibility,
+                )
+                valores = []
+            elif operador in {"Mayor que", "Menor que", "Mayor o igual", "Menor o igual"}:
+                valor_texto = st.text_input(
+                    "Valor numerico",
+                    value=valor_texto,
+                    key=f"adv_valor_numero_{filtro_id}_{key_base}",
+                    label_visibility=label_visibility,
+                )
+                valores = []
+            else:
+                st.caption("No requiere valor.")
+                valores = []
+                valor_texto = ""
+
+        with col_quitar:
+            if indice == 0:
+                st.markdown("<div style='height: 1.7rem'></div>", unsafe_allow_html=True)
+
+            if st.button(
+                "Quitar",
+                key=f"btn_quitar_filtro_{filtro_id}_{key_base}",
+            ):
+                _quitar_filtro_avanzado(key_base, filtro_id)
+                st.rerun()
+
+        filtro_actualizado = {
+            "id": filtro_id,
+            "campo": campo,
+            "operador": operador,
+            "valores": valores,
+            "valor": valor_texto,
+        }
+
+        filtros_actualizados.append(filtro_actualizado)
+        filtros_previos_para_valores.append(filtro_actualizado)
+
+    st.session_state[estado_key] = filtros_actualizados
+
+    return filtros_actualizados
+
+
+def _resumen_criterio_usuario(filtro: dict) -> str:
     operador = filtro.get("operador", "")
-    valores = filtro.get("valores") or []
+    valores = filtro.get("valores", [])
     valor = str(filtro.get("valor", "")).strip()
 
-    if operador == "Incluir seleccionados":
-        if not valores:
-            return None
-        return {"Campo": campo, "Valor": "Incluye: " + ", ".join(map(str, valores))}
+    if operador in {"Incluir seleccionados", "Excluir seleccionados"}:
+        return ", ".join([str(v) for v in valores]) if valores else "Sin seleccion"
 
-    if operador == "Excluir seleccionados":
-        if not valores:
-            return None
-        return {"Campo": campo, "Valor": "Excluye: " + ", ".join(map(str, valores))}
+    if operador in {"Contiene", "No contiene"}:
+        return valor or "Sin texto"
 
-    if operador == "Contiene":
-        if not valor:
-            return None
-        return {"Campo": campo, "Valor": f"Contiene: {valor}"}
+    if operador in {"Mayor que", "Menor que", "Mayor o igual", "Menor o igual"}:
+        return valor or "Sin numero"
 
-    if operador == "No contiene":
-        if not valor:
-            return None
-        return {"Campo": campo, "Valor": f"No contiene: {valor}"}
-
-    if operador == "Vacio":
-        return {"Campo": campo, "Valor": "Vacio"}
-
-    if operador == "No vacio":
-        return {"Campo": campo, "Valor": "No vacio"}
-
-    if operador in ["Mayor que", "Menor que", "Mayor o igual", "Menor o igual"]:
-        if not valor:
-            return None
-        return {"Campo": campo, "Valor": f"{operador}: {valor}"}
-
-    return {"Campo": campo, "Valor": f"{operador}: {valor}".strip()}
+    return operador
 
 
 def construir_resumen_filtros_avanzados(filtros: list[dict]) -> list[dict]:
     resumen = []
 
     for filtro in filtros or []:
-        item = _resumen_criterio_usuario(filtro)
-        if item:
-            resumen.append(item)
+        resumen.append(
+            {
+                "Campo": filtro.get("campo", ""),
+                "Condicion": filtro.get("operador", ""),
+                "Valor": _resumen_criterio_usuario(filtro),
+            }
+        )
 
     return resumen
 
 
-def aplicar_filtros_avanzados(
-    df: pd.DataFrame,
-    filtros: list[dict],
-) -> tuple[pd.DataFrame, list[dict]]:
-    """
-    Aplica filtros avanzados sobre el DataFrame ya filtrado por criterios base.
-    """
-    if not filtros:
-        return df, []
-
-    resultado = df.copy()
+def aplicar_filtros_avanzados(df: pd.DataFrame, filtros: list[dict]) -> tuple[pd.DataFrame, list[dict]]:
+    df_resultado = df.copy()
     resumen = []
 
-    for filtro in filtros:
-        campo = filtro.get("campo", "")
-        operador = filtro.get("operador", "")
-        valores = filtro.get("valores") or []
-        valor = str(filtro.get("valor", "")).strip()
+    for filtro in filtros or []:
+        campo = filtro.get("campo")
+        operador = filtro.get("operador")
 
-        if campo not in resultado.columns:
+        if not campo or campo not in df_resultado.columns:
             continue
 
-        serie = resultado[campo]
-        texto = _texto_serie(serie)
-        texto_min = texto.str.casefold()
-
+        serie = df_resultado[campo]
         condicion = None
+        detalle = ""
 
         if operador == "Incluir seleccionados":
+            valores = [str(valor) for valor in filtro.get("valores", [])]
             if not valores:
                 continue
 
-            seleccion = {str(v).strip().casefold() for v in valores}
-            condicion = texto_min.isin(seleccion)
+            condicion = _texto_serie(serie).isin(valores)
+            detalle = ", ".join(valores)
 
         elif operador == "Excluir seleccionados":
+            valores = [str(valor) for valor in filtro.get("valores", [])]
             if not valores:
                 continue
 
-            seleccion = {str(v).strip().casefold() for v in valores}
-            condicion = ~texto_min.isin(seleccion)
+            condicion = ~_texto_serie(serie).isin(valores)
+            detalle = ", ".join(valores)
 
         elif operador == "Contiene":
+            valor = str(filtro.get("valor", "")).strip()
             if not valor:
                 continue
 
-            condicion = texto.str.contains(valor, case=False, na=False, regex=False)
+            condicion = _texto_serie(serie).str.contains(valor, case=False, regex=False, na=False)
+            detalle = valor
 
         elif operador == "No contiene":
+            valor = str(filtro.get("valor", "")).strip()
             if not valor:
                 continue
 
-            condicion = ~texto.str.contains(valor, case=False, na=False, regex=False)
+            condicion = ~_texto_serie(serie).str.contains(valor, case=False, regex=False, na=False)
+            detalle = valor
 
         elif operador == "Vacio":
-            condicion = serie.isna() | texto.eq("") | texto_min.eq("nan")
+            texto = _texto_serie(serie)
+            condicion = serie.isna() | texto.eq("") | texto.str.lower().eq("nan")
+            detalle = "Campo vacio"
 
         elif operador == "No vacio":
-            condicion = ~(serie.isna() | texto.eq("") | texto_min.eq("nan"))
+            texto = _texto_serie(serie)
+            condicion = ~(serie.isna() | texto.eq("") | texto.str.lower().eq("nan"))
+            detalle = "Campo no vacio"
 
-        elif operador in ["Mayor que", "Menor que", "Mayor o igual", "Menor o igual"]:
-            numero_usuario = _valor_numero(valor)
-
-            if numero_usuario is None:
+        elif operador in {"Mayor que", "Menor que", "Mayor o igual", "Menor o igual"}:
+            valor_num = _valor_numero(filtro.get("valor"))
+            if valor_num is None:
                 continue
 
-            numeros = _numero_serie(serie)
+            numero = _numero_serie(serie)
 
             if operador == "Mayor que":
-                condicion = numeros > numero_usuario
+                condicion = numero > valor_num
             elif operador == "Menor que":
-                condicion = numeros < numero_usuario
+                condicion = numero < valor_num
             elif operador == "Mayor o igual":
-                condicion = numeros >= numero_usuario
+                condicion = numero >= valor_num
             elif operador == "Menor o igual":
-                condicion = numeros <= numero_usuario
+                condicion = numero <= valor_num
+
+            detalle = str(valor_num)
 
         if condicion is None:
             continue
 
-        resultado = resultado[condicion].copy()
+        antes = len(df_resultado)
+        df_resultado = df_resultado[condicion].copy()
+        despues = len(df_resultado)
 
-        item_resumen = _resumen_criterio_usuario(filtro)
-        if item_resumen:
-            resumen.append(item_resumen)
+        resumen.append(
+            {
+                "Campo": campo,
+                "Condicion": operador,
+                "Valor": detalle,
+                "Filas antes": antes,
+                "Filas despues": despues,
+            }
+        )
 
-    return resultado, resumen
+    return df_resultado, resumen

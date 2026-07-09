@@ -270,26 +270,521 @@ def aplicar_estilos():
             padding-top: 2rem;
             max-width: 1200px;
         }
+
         .ice-card {
             border: 1px solid #e5e7eb;
             border-radius: 14px;
             padding: 1rem 1.2rem;
             margin: 0.8rem 0 1rem 0;
             background: #ffffff;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
         }
+
         .ice-ok {border-left: 6px solid #16a34a;}
         .ice-warn {border-left: 6px solid #f59e0b;}
         .ice-error {border-left: 6px solid #dc2626;}
+
         .ice-muted {
             color: #6b7280;
             font-size: 0.92rem;
         }
+
+        .ice-table-title {
+            font-weight: 750;
+            font-size: 1.02rem;
+            color: #111827;
+            margin: 0.55rem 0 0.15rem 0;
+        }
+
+        .ice-section-note {
+            color: #64748b;
+            font-size: 0.90rem;
+            margin-bottom: 0.35rem;
+        }
+
+        /* Botones generales */
+        .stButton > button,
+        .stDownloadButton > button {
+            border-radius: 10px !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #ffffff !important;
+            color: #1f2937 !important;
+            font-weight: 650 !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+            transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+        }
+
+        .stButton > button:hover,
+        .stDownloadButton > button:hover {
+            border-color: #94a3b8 !important;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .stButton > button:active,
+        .stDownloadButton > button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.10);
+        }
+
+        /* Boton primario */
+        button[kind="primary"] {
+            background: #dc2626 !important;
+            color: #ffffff !important;
+            border-color: #dc2626 !important;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.22) !important;
+        }
+
+        button[kind="primary"]:hover {
+            background: #b91c1c !important;
+            border-color: #b91c1c !important;
+            box-shadow: 0 4px 12px rgba(185, 28, 28, 0.24) !important;
+        }
+
+        /* Labels de widgets */
+        label[data-testid="stWidgetLabel"] p {
+            font-weight: 650 !important;
+            color: #334155 !important;
+        }
+
+        /* Expanders */
+        details {
+            border-color: #d7dee8 !important;
+            border-radius: 10px !important;
+        }
+
+        details summary {
+            font-weight: 650 !important;
+            color: #1f2937 !important;
+        }
+
+        /* DataFrames */
+        div[data-testid="stDataFrame"] {
+            border: 1px solid #d7dee8;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        div[data-testid="stDataFrame"] .stDataFrameGlideDataEditor {
+            --gdg-border-color: rgba(100, 116, 139, 0.28) !important;
+            --gdg-horizontal-border-color: rgba(100, 116, 139, 0.22) !important;
+            --gdg-bg-header: rgba(241, 245, 249, 1) !important;
+            --gdg-bg-header-hovered: rgba(226, 232, 240, 1) !important;
+            --gdg-text-header: #111827 !important;
+            --gdg-header-font-style: 700 14px !important;
+            --gdg-base-font-style: 400 14px !important;
+            --gdg-cell-horizontal-padding: 8px !important;
+            --gdg-cell-vertical-padding: 3px !important;
+        }
+
+        /* Inputs compactos */
+        div[data-baseweb="select"] {
+            border-radius: 10px !important;
+        }
+
+        /* --- INICIO TABLAS VISIBLES ICEBERG --- */
+
+        /* Contenedor general de tablas Streamlit */
+        div[data-testid="stDataFrame"] {
+            border: 1px solid #94a3b8 !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08) !important;
+        }
+
+        div[data-testid="stDataFrameResizable"] {
+            border: 1px solid #94a3b8 !important;
+            border-radius: 10px !important;
+        }
+
+        /* Tabla interna tipo Glide Data Editor */
+        div[data-testid="stDataFrame"] .stDataFrameGlideDataEditor {
+            /* Encabezado / primera fila */
+            --gdg-bg-header: #e2e8f0 !important;
+            --gdg-bg-header-hovered: #cbd5e1 !important;
+            --gdg-bg-header-has-focus: #cbd5e1 !important;
+            --gdg-text-header: #0f172a !important;
+            --gdg-text-header-selected: #ffffff !important;
+            --gdg-header-font-style: 700 14px "Source Sans", sans-serif !important;
+
+            /* Celdas */
+            --gdg-text-dark: #111827 !important;
+            --gdg-text-medium: #334155 !important;
+            --gdg-base-font-style: 400 14px "Source Sans", sans-serif !important;
+
+            /* Separacion visual de columnas y filas */
+            --gdg-border-color: rgba(71, 85, 105, 0.55) !important;
+            --gdg-horizontal-border-color: rgba(71, 85, 105, 0.45) !important;
+            --gdg-drilldown-border: rgba(71, 85, 105, 0.35) !important;
+
+            /* Fondo */
+            --gdg-bg-cell: #ffffff !important;
+            --gdg-bg-cell-medium: #f8fafc !important;
+            --gdg-bg-group-header: #e2e8f0 !important;
+            --gdg-bg-group-header-hovered: #cbd5e1 !important;
+
+            /* Mantener compacto */
+            --gdg-cell-horizontal-padding: 8px !important;
+            --gdg-cell-vertical-padding: 3px !important;
+        }
+
+        /* Tablas HTML generadas por st.table, si existen */
+        div[data-testid="stTable"] table {
+            border-collapse: collapse !important;
+            border: 1px solid #94a3b8 !important;
+            width: 100% !important;
+        }
+
+        div[data-testid="stTable"] thead tr th {
+            background: #e2e8f0 !important;
+            color: #0f172a !important;
+            font-weight: 700 !important;
+            border: 1px solid #94a3b8 !important;
+            padding: 0.35rem 0.5rem !important;
+        }
+
+        div[data-testid="stTable"] tbody tr td {
+            border: 1px solid #cbd5e1 !important;
+            color: #1f2937 !important;
+            padding: 0.32rem 0.5rem !important;
+        }
+
+        div[data-testid="stTable"] tbody tr:nth-child(even) td {
+            background: #f8fafc !important;
+        }
+
+        /* Titulos auxiliares */
+        .ice-table-title {
+            font-weight: 750 !important;
+            font-size: 1.04rem !important;
+            color: #0f172a !important;
+            margin: 0.6rem 0 0.25rem 0 !important;
+        }
+
+        .ice-section-note {
+            color: #475569 !important;
+            font-size: 0.91rem !important;
+            margin-bottom: 0.4rem !important;
+        }
+
+        /* --- FIN TABLAS VISIBLES ICEBERG --- */
+
+
+        /* --- INICIO GRID FILTROS AVANZADOS ICEBERG --- */
+
+        .ice-filter-grid-header {
+            display: grid;
+            grid-template-columns: 1.55fr 1.25fr 2.60fr 0.70fr;
+            gap: 0.75rem;
+            margin: 0.55rem 0 0.35rem 0;
+            align-items: center;
+        }
+
+        .ice-filter-grid-header div {
+            background: #e2e8f0;
+            color: #0f172a;
+            font-weight: 750;
+            font-size: 0.90rem;
+            padding: 0.42rem 0.65rem;
+            border: 1px solid #94a3b8;
+            border-radius: 9px;
+            line-height: 1.1rem;
+        }
+
+        .ice-filter-row-label {
+            color: #475569;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin: 0.25rem 0 0.15rem 0;
+        }
+
+        .ice-filter-row-separator {
+            height: 1px;
+            background: linear-gradient(
+                90deg,
+                rgba(148, 163, 184, 0.15),
+                rgba(148, 163, 184, 0.75),
+                rgba(148, 163, 184, 0.15)
+            );
+            margin: 0.28rem 0 0.35rem 0;
+        }
+
+        /* Celdas visuales de la grilla de filtros avanzados */
+        div[class*="st-key-adv_campo_"],
+        div[class*="st-key-adv_operador_"],
+        div[class*="st-key-adv_valores_"],
+        div[class*="st-key-adv_valor_texto_"],
+        div[class*="st-key-adv_valor_numero_"],
+        div[class*="st-key-btn_quitar_filtro_"] {
+            background: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 11px !important;
+            padding: 0.34rem 0.42rem !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        div[class*="st-key-adv_campo_"]:hover,
+        div[class*="st-key-adv_operador_"]:hover,
+        div[class*="st-key-adv_valores_"]:hover,
+        div[class*="st-key-adv_valor_texto_"]:hover,
+        div[class*="st-key-adv_valor_numero_"]:hover {
+            border-color: #94a3b8 !important;
+            background: #f1f5f9 !important;
+        }
+
+        /* Reduce el ruido visual de labels internos cuando usamos encabezado propio */
+        div[class*="st-key-adv_campo_"] label,
+        div[class*="st-key-adv_operador_"] label,
+        div[class*="st-key-adv_valores_"] label,
+        div[class*="st-key-adv_valor_texto_"] label,
+        div[class*="st-key-adv_valor_numero_"] label {
+            margin-bottom: 0.15rem !important;
+        }
+
+        /* Boton quitar dentro de celda */
+        div[class*="st-key-btn_quitar_filtro_"] button {
+            width: 100%;
+            min-height: 2.45rem;
+        }
+
+        /* --- FIN GRID FILTROS AVANZADOS ICEBERG --- */
+
+
+        /* --- INICIO ESTILO GLIDE DATAFRAME ICEBERG --- */
+
+        div[data-testid="stDataFrame"] {
+            border: 1px solid rgba(148, 163, 184, 0.52) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.07) !important;
+            background: rgba(255,255,255,0.82) !important;
+        }
+
+        div[data-testid="stDataFrameResizable"] {
+            border: 1px solid rgba(148, 163, 184, 0.46) !important;
+            border-radius: 14px !important;
+        }
+
+        div[data-testid="stDataFrame"] .stDataFrameGlideDataEditor {
+            --gdg-bg-header: rgba(15, 23, 42, 0.92) !important;
+            --gdg-bg-header-hovered: rgba(30, 41, 59, 0.96) !important;
+            --gdg-bg-header-has-focus: rgba(30, 41, 59, 0.96) !important;
+            --gdg-text-header: #f8fafc !important;
+            --gdg-text-header-selected: #ffffff !important;
+            --gdg-header-font-style: 700 13px "Source Sans", sans-serif !important;
+
+            --gdg-text-dark: #0f172a !important;
+            --gdg-text-medium: #334155 !important;
+            --gdg-base-font-style: 400 13px "Source Sans", sans-serif !important;
+
+            --gdg-border-color: rgba(100, 116, 139, 0.42) !important;
+            --gdg-horizontal-border-color: rgba(100, 116, 139, 0.34) !important;
+
+            --gdg-bg-cell: #ffffff !important;
+            --gdg-bg-cell-medium: #f8fafc !important;
+            --gdg-bg-group-header: rgba(15, 23, 42, 0.92) !important;
+            --gdg-bg-group-header-hovered: rgba(30, 41, 59, 0.96) !important;
+
+            --gdg-cell-horizontal-padding: 9px !important;
+            --gdg-cell-vertical-padding: 3px !important;
+        }
+
+        /* --- FIN ESTILO GLIDE DATAFRAME ICEBERG --- */
+
+
+        /* --- INICIO TABLA HTML AGGRID ICEBERG --- */
+
+        .ice-ag-panel {
+            margin-top: 0.75rem;
+            background: #ffffff;
+            border: 1px solid #d7e0ea;
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+        }
+
+        .ice-ag-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 13px 16px;
+            background: #f8fbff;
+            border-bottom: 1px solid #d7e0ea;
+            color: #475569;
+            font-size: 0.88rem;
+        }
+
+        .ice-ag-title {
+            color: #102033;
+            font-weight: 800;
+            font-size: 0.94rem;
+        }
+
+        .ice-ag-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 5px 10px;
+            background: #e0f2fe;
+            color: #075985;
+            border: 1px solid #bae6fd;
+            font-weight: 750;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        .ice-ag-grid-wrap {
+            overflow-x: auto;
+            background: #ffffff;
+        }
+
+        .ice-ag-table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .ice-ag-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            text-align: left;
+            background: #e8f1fa;
+            color: #075985;
+            border-top: 1px solid #c7d2df;
+            border-bottom: 1px solid #c7d2df;
+            border-right: 1px solid #d7e0ea;
+            padding: 12px 14px;
+            font-size: 0.76rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            font-weight: 850;
+            white-space: nowrap;
+        }
+
+        .ice-ag-table thead th:last-child {
+            border-right: 0;
+        }
+
+        .ice-ag-table tbody td {
+            padding: 11px 14px;
+            font-size: 0.90rem;
+            color: #1e293b;
+            border-bottom: 1px solid #e7edf3;
+            border-right: 1px solid #eef3f8;
+            vertical-align: middle;
+        }
+
+        .ice-ag-table tbody td:last-child {
+            border-right: 0;
+        }
+
+        .ice-ag-table tbody tr:nth-child(even) {
+            background: #f8fbff;
+        }
+
+        .ice-ag-table tbody tr {
+            transition: background 0.14s ease, box-shadow 0.14s ease;
+        }
+
+        .ice-ag-table tbody tr:hover {
+            background: #eff8ff;
+            box-shadow: inset 5px 0 0 #075985;
+        }
+
+        .ice-ag-index {
+            color: #64748b;
+            font-weight: 750;
+            width: 58px;
+            text-align: center;
+        }
+
+        .ice-ag-field {
+            font-weight: 750;
+            color: #0f172a;
+        }
+
+        .ice-ag-example {
+            color: #334155;
+            max-width: 620px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ice-ag-count {
+            font-weight: 800;
+            color: #075985;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 860px) {
+            .ice-ag-table {
+                min-width: 0;
+            }
+
+            .ice-ag-table thead {
+                display: none;
+            }
+
+            .ice-ag-table,
+            .ice-ag-table tbody,
+            .ice-ag-table tr,
+            .ice-ag-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .ice-ag-table tbody {
+                display: grid;
+                gap: 12px;
+                padding: 12px;
+                background: #f8fbff;
+            }
+
+            .ice-ag-table tbody tr {
+                background: #ffffff !important;
+                border: 1px solid #d7e0ea;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            }
+
+            .ice-ag-table tbody td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 16px;
+                border-right: 0;
+                padding: 11px 13px;
+                white-space: normal;
+            }
+
+            .ice-ag-table tbody td::before {
+                content: attr(data-label);
+                font-weight: 850;
+                font-size: 0.72rem;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: #64748b;
+            }
+
+            .ice-ag-example {
+                white-space: normal;
+                text-align: right;
+            }
+        }
+
+        /* --- FIN TABLA HTML AGGRID ICEBERG --- */
+
         </style>
         """,
         unsafe_allow_html=True,
     )
-
 
 def limpiar_sesion_login():
     st.session_state["login_validado"] = False
@@ -357,10 +852,12 @@ def mostrar_sidebar():
 
 def validar_credenciales_iceberg(usuario: str, password: str) -> tuple[bool, str]:
     """
-    Valida credenciales antes de ejecutar la descarga completa.
+    Valida usuario y contrasena directamente contra ICEBERG.
 
-    Esto evita que el usuario haga clic en Descargar y consolidar
-    y luego quede sin respuesta clara si el login falla.
+    Regla:
+    - Si el login sigue mostrando el formulario, se considera fallido.
+    - Solo se considera exitoso si aparece una senal fuerte de sesion iniciada:
+      logoff/logout/cerrar sesion o rutas internas de reportes.
     """
     if sync_playwright is None:
         return False, "Playwright no está instalado o no está disponible. Revisa requirements.txt."
@@ -369,6 +866,12 @@ def validar_credenciales_iceberg(usuario: str, password: str) -> tuple[bool, str
 
     if not ok_chromium:
         return False, mensaje_chromium
+
+    usuario = usuario.strip()
+    password = password.strip()
+
+    if not usuario or not password:
+        return False, "Debes ingresar usuario y contraseña de ICEBERG."
 
     browser = None
 
@@ -385,35 +888,87 @@ def validar_credenciales_iceberg(usuario: str, password: str) -> tuple[bool, str
             page.set_default_timeout(45000)
 
             page.goto(ICEBERG_LOGIN_URL, wait_until="domcontentloaded")
+
+            if not page.locator("#userName").is_visible(timeout=10000):
+                browser.close()
+                return False, "No se encontró el campo de usuario en ICEBERG."
+
             page.locator("#userName").fill(usuario)
             page.locator('input[name="password"]').fill(password)
-            page.get_by_role("button", name="Login").click()
 
             try:
-                page.wait_for_load_state("networkidle", timeout=45000)
+                page.get_by_role("button", name="Login").click(timeout=8000)
             except Exception:
-                # ICEBERG no siempre llega a networkidle.
+                page.locator('input[type="submit"], button[type="submit"], button').first.click(timeout=8000)
+
+            try:
+                page.wait_for_load_state("domcontentloaded", timeout=20000)
+            except Exception:
+                pass
+
+            try:
+                page.wait_for_load_state("networkidle", timeout=15000)
+            except Exception:
+                pass
+
+            try:
+                page.wait_for_timeout(1500)
+            except Exception:
                 pass
 
             html = page.content().lower()
             url_actual = page.url.lower()
 
-            if "logoff" in html or "reportgroup.action" in html or "reports" in html:
-                browser.close()
-                return True, "Credenciales validadas correctamente."
-
             sigue_en_login = False
+
             try:
                 sigue_en_login = page.locator("#userName").is_visible(timeout=2000)
             except Exception:
                 sigue_en_login = False
 
+            indicadores_fallo = [
+                "login fallido",
+                "credenciales",
+                "usuario o contraseña",
+                "usuario o contrasena",
+                "contraseña incorrecta",
+                "contrasena incorrecta",
+                "invalid",
+                "incorrect",
+                "authentication failed",
+                "acceso denegado",
+            ]
+
+            tiene_mensaje_fallo = any(texto in html for texto in indicadores_fallo)
+
+            indicadores_exito = [
+                "logoff",
+                "logout",
+                "cerrar sesión",
+                "cerrar sesion",
+                "reportgroup.action",
+                "reportdetail.action",
+                "reportgroup",
+                "groupid",
+            ]
+
+            tiene_senal_exito = (
+                any(texto in html for texto in indicadores_exito)
+                or any(texto in url_actual for texto in indicadores_exito)
+            )
+
             browser.close()
 
-            if sigue_en_login or "login" in url_actual:
-                return False, "No fue posible iniciar sesión. Revisa usuario y contraseña."
+            if sigue_en_login or tiene_mensaje_fallo:
+                return False, "No fue posible iniciar sesión en ICEBERG. Revisa usuario y contraseña."
 
-            return False, "No se pudo confirmar el login. Intenta nuevamente."
+            if tiene_senal_exito:
+                return True, "Credenciales validadas correctamente contra ICEBERG."
+
+            return False, (
+                "No se pudo confirmar el inicio de sesión en ICEBERG. "
+                "Revisa usuario y contraseña e intenta nuevamente."
+            )
 
     except Exception as e:
         if browser:
@@ -422,39 +977,12 @@ def validar_credenciales_iceberg(usuario: str, password: str) -> tuple[bool, str
             except Exception:
                 pass
 
-        return False, f"Error validando credenciales: {e}"
-
-
-def obtener_reportes_ui() -> tuple[list[str], dict[str, str]]:
-    """
-    Construye las opciones visibles de reportes/formato desde config.REPORTES_DISPONIBLES.
-    Retorna:
-    - lista de etiquetas para Streamlit
-    - mapa etiqueta -> clave_reporte
-    """
-    reportes = getattr(config, "REPORTES_DISPONIBLES", {})
-
-    opciones = []
-    mapa = {}
-
-    for clave, reporte in reportes.items():
-        nombre = reporte.get("nombre", clave)
-        etiqueta = f"{nombre} [{clave}]"
-        opciones.append(etiqueta)
-        mapa[etiqueta] = clave
-
-    if not opciones:
-        etiqueta = "Ocupacion_Docentes [ocupacion_docente]"
-        opciones = [etiqueta]
-        mapa[etiqueta] = "ocupacion_docente"
-
-    return opciones, mapa
-
+        return False, f"Error validando credenciales en ICEBERG: {e}"
 
 def construir_env(periodos: list[str], reportes: list[str] | None = None) -> dict:
     env = os.environ.copy()
 
-    # Evita errores de codificaci?n con emojis o tildes en Windows.
+    # Evita errores de codificación con emojis o tildes en Windows.
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
 
@@ -1136,13 +1664,39 @@ def mostrar_login():
 
 
 
+def obtener_reportes_ui() -> tuple[list[str], dict[str, str]]:
+    """
+    Construye las opciones visibles de reportes/formato desde config.REPORTES_DISPONIBLES.
+
+    Retorna:
+    - lista de etiquetas visibles para Streamlit
+    - mapa etiqueta -> clave_reporte
+    """
+    reportes = getattr(config, "REPORTES_DISPONIBLES", {})
+
+    opciones = []
+    mapa = {}
+
+    for clave, reporte in reportes.items():
+        nombre = reporte.get("nombre", clave)
+        etiqueta = f"{nombre} [{clave}]"
+        opciones.append(etiqueta)
+        mapa[etiqueta] = clave
+
+    if not opciones:
+        etiqueta = "Ocupacion_Docentes [ocupacion_docente]"
+        opciones = [etiqueta]
+        mapa[etiqueta] = "ocupacion_docente"
+
+    return opciones, mapa
+
 def mostrar_descarga():
     st.markdown(
         """
         <div class="ice-card ice-ok">
             <strong>Paso 2. Descargar y consolidar</strong><br>
             <span class="ice-muted">
-            Selecciona el formato/reporte y los periodos. La app mostrar? avances y errores durante la ejecuci?n.
+            Selecciona el formato/reporte y los periodos. La app mostrará avances y errores durante la ejecución.
             </span>
         </div>
         """,
@@ -1169,7 +1723,7 @@ def mostrar_descarga():
         )
 
         periodos = st.multiselect(
-            "Periodos acad?micos",
+            "Periodos académicos",
             PERIODOS_UI,
             key=f"periodos_academicos_{nonce_busqueda}",
         )
@@ -1194,7 +1748,7 @@ def mostrar_descarga():
 
         env = construir_env(periodos, [reporte_clave])
 
-        st.info("Proceso iniciado. No cierres esta pesta?a hasta finalizar.")
+        st.info("Proceso iniciado. No cierres esta pestaña hasta finalizar.")
         st.write("Formato/reporte enviado:", f"{reporte_nombre} [{reporte_clave}]")
         st.write("Periodos enviados:", periodos)
 
@@ -1206,24 +1760,24 @@ def mostrar_descarga():
 
         if not ok_descarga:
             st.session_state["ultimo_error"] = error_descarga
-            st.error("No se continuar? porque fall? la descarga.")
+            st.error("No se continuará porque fallá la descarga.")
             return
 
         ok_consolidacion, error_consolidacion = ejecutar_script(
             "2_Consolidar.py",
             env,
-            "Paso 2.2 - Consolidaci?n",
+            "Paso 2.2 - Consolidación",
         )
 
         if not ok_consolidacion:
             st.session_state["ultimo_error"] = error_consolidacion
-            st.error("No se continuar? porque fall? la consolidaci?n.")
+            st.error("No se continuará porque fallá la consolidación.")
             return
 
         consolidado = buscar_consolidado_mas_reciente()
 
         if not consolidado:
-            mensaje = "La consolidaci?n termin?, pero no se encontr? Consolidado_Final*.xlsx."
+            mensaje = "La consolidación terminó, pero no se encontró Consolidado_Final*.xlsx."
             st.session_state["ultimo_error"] = mensaje
             st.error(mensaje)
             return
@@ -1256,7 +1810,7 @@ def mostrar_descarga():
             mensaje=mensaje_ok,
         )
 
-        st.success("Descarga y consolidaci?n finalizadas. Ya puedes filtrar.")
+        st.success("Descarga y consolidación finalizadas. Ya puedes filtrar.")
         st.rerun()
 
 def mostrar_panel_filtrado(consolidado_path: Path):
